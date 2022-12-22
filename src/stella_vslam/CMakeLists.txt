@@ -58,6 +58,8 @@ else()
     message(FATAL_ERROR "Invalid BoW framework: ${BOW_FRAMEWORK}")
 endif()
 
+add_subdirectory(${PROJECT_SOURCE_DIR}/3rd/Sophus ${PROJECT_BINARY_DIR}/3rd/Sophus)
+
 # ----- Create stella_vslam library -----
 
 add_library(${PROJECT_NAME}
@@ -128,6 +130,12 @@ else()
     message(FATAL_ERROR "Invalid BoW framework: ${BOW_FRAMEWORK}")
 endif()
 
+target_include_directories(${PROJECT_NAME}
+        PUBLIC
+        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rd/Sophus/sophus>"
+        "$<INSTALL_INTERFACE:include/fbow>")
+set(Sophus_LIBARY Sophus::Sophus)
+
 if(USE_ARUCO)
     target_compile_definitions(${PROJECT_NAME} PUBLIC USE_ARUCO)
 endif()
@@ -189,6 +197,7 @@ target_link_libraries(${PROJECT_NAME}
                       ${CXSPARSE_LIBRARIES}
                       ${SUITESPARSE_LIBRARIES}
                       ${BoW_LIBRARY}
+                      ${Sophus_LIBRARY}
                       PRIVATE
                       ${LAPACK_LIBRARIES})
 
