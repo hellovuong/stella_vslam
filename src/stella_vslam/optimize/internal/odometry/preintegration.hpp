@@ -74,8 +74,7 @@ public:
     ///
     /// @param[in] state0 current state
     /// @param[out] state1 predicted state
-    void predictState(const PoseState& state0, const Eigen::Vector3d& g,
-                      PoseState& state1) const {}
+    void predictState(const PoseState& state0, PoseState& state1) const {}
 
     /// @brief Compute residual between two states given this pseudo-measurement
     /// and optionally compute Jacobians.
