@@ -12,3 +12,4 @@ install(FILES ${HEADERS}
 # Append subdirectory
 add_subdirectory(se3)
 add_subdirectory(sim3)
+add_subdirectory(odometry)
