@@ -150,7 +150,7 @@ endif()
 target_include_directories(${PROJECT_NAME}
         PUBLIC
         "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rd/Sophus/sophus>"
-        "$<INSTALL_INTERFACE:include/fbow>")
+        "$<INSTALL_INTERFACE:include/Sophus>")
 set(Sophus_LIBARY Sophus::Sophus)
 
 if(USE_ARUCO)
@@ -242,7 +242,8 @@ install(DIRECTORY ${tinycolormap_INCLUDE_DIR}
         DESTINATION ${STELLA_VSLAM_INCLUDE_INSTALL_DIR}/3rd/tinycolormap)
 install(DIRECTORY ${spdlog_INCLUDE_DIR}
         DESTINATION ${STELLA_VSLAM_INCLUDE_INSTALL_DIR}/3rd/spdlog)
-
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/3rd/Sophus/sophus
+        DESTINATION ${STELLA_VSLAM_INCLUDE_INSTALL_DIR}/3rd/Sophus)
 # ----- Append subdirectory -----
 
 add_subdirectory(camera)
