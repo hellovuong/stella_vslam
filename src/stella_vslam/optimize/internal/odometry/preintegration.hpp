@@ -93,8 +93,8 @@ public:
     /// respect to angular velocity bias
     /// @return residual
     VecN residual(const PoseState& state0, const Eigen::Vector3d& g,
-                  const PoseState& state1, const Eigen::Vector3d& curr_bg,
-                  const Eigen::Vector3d& curr_ba, MatNN* d_res_d_state0 = nullptr,
+                  const PoseState& state1, const Eigen::Vector3d& curr_bv,
+                  const Eigen::Vector3d& curr_bw, MatNN* d_res_d_state0 = nullptr,
                   MatNN* d_res_d_state1 = nullptr, MatN3* d_res_d_bv = nullptr,
                   MatN3* d_res_d_bw = nullptr) const {}
 
