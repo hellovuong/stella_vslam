@@ -1,0 +1,89 @@
+# TUM-RGBD RGBD model for 01
+
+#==============#
+# Camera Model #
+#==============#
+
+Camera:
+  name: "openloris_rgbd"
+  setup: "RGBD"
+  model: "perspective"
+
+  fx: 6.1145098876953125e+02
+  fy: 6.1148571777343750e+02
+  cx: 4.3320397949218750e+02
+  cy: 2.4947302246093750e+02
+
+  k1: 0.0
+  k2: 0.0
+  p1: 0.0
+  p2: 0.0
+  k3: 0.0
+
+  fps: 30.0
+  cols: 848
+  rows: 480
+  focal_x_baseline: 40.0
+  depth_threshold: 40.0
+
+  color_order: "RGB"
+
+#=====================#
+# Tracking Parameters #
+#=====================#
+
+Preprocessing:
+  min_size: 800
+  depthmap_factor: 1000.0 # Note: Set it to 1.0 for the rosbag format data set.
+
+#================#
+# ORB Parameters #
+#================#
+
+Feature:
+  name: "default ORB feature extraction setting"
+  scale_factor: 1.2
+  num_levels: 8
+  ini_fast_threshold: 10
+  min_fast_threshold: 5
+
+#====================#
+# Mapping Parameters #
+#====================#
+
+Mapping:
+  backend: "g2o"
+  baseline_dist_thr: 0.07471049682
+  redundant_obs_ratio_thr: 0.9
+  num_covisibilities_for_landmark_generation: 20
+  num_covisibilities_for_landmark_fusion: 20
+
+#=====================#
+# Tracking Parameters #
+#=====================#
+
+Tracking:
+  backend: "g2o"
+
+#=========================#
+# LoopDetector Parameters #
+#=========================#
+
+LoopDetector:
+  backend: "g2o"
+
+#===========================#
+# PangolinViewer Parameters #
+#===========================#
+
+PangolinViewer:
+  keyframe_size: 0.05
+  keyframe_line_width: 1
+  graph_line_width: 1
+  point_size: 2
+  camera_size: 0.08
+  camera_line_width: 3
+  viewpoint_x: 0
+  viewpoint_y: -0.9
+  viewpoint_z: -1.9
+  viewpoint_f: 400
