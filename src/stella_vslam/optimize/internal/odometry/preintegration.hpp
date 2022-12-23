@@ -36,13 +36,12 @@ public:
                                  Eigen::Vector3d bias_v,
                                  Eigen::Vector3d bias_w)
         : start_t_ns(start_t_ns),
+          cov(MatNN::Zero()),
           cov_inv_computed(false),
+          d_state_d_bw(MatN3::Zero()),
+          d_state_d_bv(MatN3::Zero()),
           bias_w(std::move(bias_w)),
-          bias_v(std::move(bias_v)) {
-        cov.setZero();
-        d_state_d_bv.setZero();
-        d_state_d_bw.setZero();
-    }
+          bias_v(std::move(bias_v)) {}
 
     /// @brief Propagate current state given OdometryData and optionally compute
     /// Jacobians.
@@ -129,7 +128,7 @@ public:
 
 private:
     ///< Integration start time in nanoseconds
-    int64_t start_t_ns;
+    int64_t start_t_ns{};
 
     ///< Delta state
     PoseState delta_state;
@@ -139,7 +138,7 @@ private:
     ///< Cached inverse of measurement covariance
     mutable MatNN cov_inv;
     ///< If the cached inverse covariance is computed
-    mutable bool cov_inv_computed;
+    mutable bool cov_inv_computed{};
 
     //! Jacobian of delta state with respect to angular velocity bias
     MatN3 d_state_d_bw;
