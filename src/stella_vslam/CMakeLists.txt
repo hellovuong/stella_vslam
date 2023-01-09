@@ -25,7 +25,7 @@ find_package(g2o REQUIRED
              g2o::csparse_extension
              OPTIONAL_COMPONENTS
              g2o::csparse)
-
+message(STATUS "g2o: Found at ${g2o_INCLUDE_DIR}")
 # gtsam
 set(USE_GTSAM ON CACHE BOOL "Enable gtsam")
 unset(GTSAM_INCLUDE_DIRS CACHE)
@@ -42,20 +42,20 @@ endif()
 if(TARGET g2o::csparse)
     set(${CXSPARSE_LIBRARIES} g2o::csparse)
 else()
-    # CXSparse for g2o
-    find_package(CXSparse)
-    if(CXSPARSE_FOUND)
-        include_directories(${CXSPARSE_INCLUDE_DIRS})
-    endif()
-    # SuiteSparse for g2o
-    if(MSVC)
-        find_package(SuiteSparse CONFIG)
-    else()
-        find_package(SuiteSparse)
-    endif()
-    if(SUITESPARSE_FOUND)
-        include_directories(${SUITESPARSE_INCLUDE_DIRS})
-    endif()
+#    # CXSparse for g2o
+#    find_package(CXSparse)
+#    if(CXSPARSE_FOUND)
+#        include_directories(${CXSPARSE_INCLUDE_DIRS})
+#    endif()
+#    # SuiteSparse for g2o
+#    if(MSVC)
+#        find_package(SuiteSparse CONFIG)
+#    else()
+#        find_package(SuiteSparse)
+#    endif()
+#    if(SUITESPARSE_FOUND)
+#        include_directories(${SUITESPARSE_INCLUDE_DIRS})
+#    endif()
 endif()
 
 # Check BoW Framework

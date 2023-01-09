@@ -165,6 +165,9 @@ public:
      */
     Vec3_t triangulate_stereo(const unsigned int idx) const;
 
+    const Mat66_t& getCov() const;
+    void setCov(const Mat66_t& cov);
+
     //! current frame ID
     unsigned int id_;
 
@@ -211,6 +214,9 @@ private:
     Mat33_t rot_wc_;
     //! translation: camera -> world
     Vec3_t trans_wc_;
+
+    //! Covariance
+    Mat66_t cov_ = Mat66_t::Zero();
 };
 
 } // namespace data

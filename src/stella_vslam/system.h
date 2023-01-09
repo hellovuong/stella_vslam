@@ -86,11 +86,11 @@ public:
     void save_map_database(const std::string& path) const;
 
     //! Get the map publisher
-    const std::shared_ptr<publish::map_publisher> get_map_publisher() const;
+    std::shared_ptr<publish::map_publisher> get_map_publisher() const;
 
     //! Get the frame publisher
-    const std::shared_ptr<publish::frame_publisher> get_frame_publisher() const;
-
+    std::shared_ptr<publish::frame_publisher> get_frame_publisher() const;
+    tracking_module* getTracker() const;
     //-----------------------------------------
     // module management
 

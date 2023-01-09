@@ -4,6 +4,7 @@
 #include "stella_vslam/data/landmark.h"
 #include "stella_vslam/feature/orb_extractor.h"
 #include "stella_vslam/match/stereo.h"
+#include "frame.h"
 
 #include <thread>
 
@@ -142,6 +143,12 @@ std::vector<unsigned int> frame::get_keypoints_in_cell(const float ref_x, const 
 
 Vec3_t frame::triangulate_stereo(const unsigned int idx) const {
     return data::triangulate_stereo(camera_, rot_wc_, trans_wc_, frm_obs_, idx);
+}
+const Mat66_t& frame::getCov() const {
+    return cov_;
+}
+void frame::setCov(const Mat66_t& cov) {
+    cov_ = cov;
 }
 
 } // namespace data

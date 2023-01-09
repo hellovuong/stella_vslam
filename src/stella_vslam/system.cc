@@ -23,7 +23,9 @@
 #include "stella_vslam/util/image_converter.h"
 #include "stella_vslam/util/yaml.h"
 
+#include <memory>
 #include <thread>
+#include <utility>
 
 #include <spdlog/spdlog.h>
 
@@ -53,8 +55,8 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     orb_params_db_->add_orb_params(orb_params_);
 
     // frame and map publisher
-    frame_publisher_ = std::shared_ptr<publish::frame_publisher>(new publish::frame_publisher(cfg_, map_db_));
-    map_publisher_ = std::shared_ptr<publish::map_publisher>(new publish::map_publisher(cfg_, map_db_));
+    frame_publisher_ = std::make_shared<publish::frame_publisher>(cfg_, map_db_);
+    map_publisher_ = std::make_shared<publish::map_publisher>(cfg_, map_db_);
 
     // map I/O
     auto map_format = system_params["map_format"].as<std::string>("msgpack");
@@ -214,11 +216,11 @@ void system::save_map_database(const std::string& path) const {
     resume_other_threads();
 }
 
-const std::shared_ptr<publish::map_publisher> system::get_map_publisher() const {
+std::shared_ptr<publish::map_publisher> system::get_map_publisher() const {
     return map_publisher_;
 }
 
-const std::shared_ptr<publish::frame_publisher> system::get_frame_publisher() const {
+std::shared_ptr<publish::frame_publisher> system::get_frame_publisher() const {
     return frame_publisher_;
 }
 
@@ -305,7 +307,7 @@ data::frame system::create_monocular_frame(const cv::Mat& img, const double time
         marker_detector_->detect(img_gray, markers_2d);
     }
 
-    return data::frame(timestamp, camera_, orb_params_, frm_obs, std::move(markers_2d));
+    return {timestamp, camera_, orb_params_, frm_obs, markers_2d};
 }
 
 data::frame system::create_stereo_frame(const cv::Mat& left_img, const cv::Mat& right_img, const double timestamp, const cv::Mat& mask) {
@@ -465,7 +467,7 @@ std::shared_ptr<Mat44_t> system::feed_frame(const data::frame& frm, const cv::Ma
     const auto cam_pose_wc = tracker_->feed_frame(frm);
 
     const auto end = std::chrono::system_clock::now();
-    double elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    double elapsed_ms = static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 
     frame_publisher_->update(tracker_->curr_frm_.get_landmarks(),
                              !mapper_->is_paused(),
@@ -577,6 +579,9 @@ void system::resume_other_threads() const {
     if (mapper_) {
         mapper_->resume();
     }
+}
+tracking_module* system::getTracker() const {
+    return tracker_;
 }
 
 } // namespace stella_vslam

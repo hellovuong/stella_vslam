@@ -118,7 +118,7 @@ std::shared_ptr<Mat44_t> tracking_module::feed_frame(data::frame curr_frm) {
         std::this_thread::sleep_for(std::chrono::microseconds(5000));
     }
 
-    curr_frm_ = curr_frm;
+    curr_frm_ = std::move(curr_frm);
 
     bool succeeded = false;
     if (tracking_state_ == tracker_state_t::Initializing) {
@@ -384,7 +384,11 @@ bool tracking_module::optimize_current_frame_with_local_map(unsigned int& num_tr
     // optimize the pose
     Mat44_t optimized_pose;
     std::vector<bool> outlier_flags;
+    auto po_g2o = std::static_pointer_cast<stella_vslam::optimize::pose_optimizer_g2o>(pose_optimizer_);
+
     pose_optimizer_->optimize(curr_frm_, optimized_pose, outlier_flags);
+    if (po_g2o)
+        curr_frm_.setCov(po_g2o->getCov());
     curr_frm_.set_pose_cw(optimized_pose);
 
     // Reject outliers

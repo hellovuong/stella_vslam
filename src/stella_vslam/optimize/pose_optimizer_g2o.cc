@@ -7,7 +7,6 @@
 #include "stella_vslam/util/converter.h"
 
 #include <vector>
-#include <mutex>
 
 #include <Eigen/StdVector>
 #include <g2o/core/solver.h>
@@ -16,6 +15,11 @@
 #include <g2o/core/robust_kernel_impl.h>
 #include <g2o/solvers/eigen/linear_solver_eigen.h>
 #include <g2o/core/optimization_algorithm_levenberg.h>
+
+#include <spdlog/spdlog.h>
+namespace g2o {
+typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> MatrixXD;
+}
 
 namespace stella_vslam {
 namespace optimize {
@@ -166,7 +170,33 @@ unsigned int pose_optimizer_g2o::optimize(const Mat44_t& cam_pose_cw, const data
 
     optimized_pose = util::converter::to_eigen_mat(frm_vtx->estimate());
 
+    g2o::SparseBlockMatrix<g2o::MatrixXD> spinv;
+    const auto tp_1 = std::chrono::steady_clock::now();
+    optimizer.computeMarginals(spinv, frm_vtx);
+    const auto tp_2 = std::chrono::steady_clock::now();
+    const auto track_time = std::chrono::duration_cast<std::chrono::duration<double>>(tp_2 - tp_1).count();
+    spdlog::debug("Computed marginals = {}s (cols={} rows={}, v={}) \n", track_time, spinv.cols(), spinv.rows(), frm_vtx->hessianIndex());
+
+    if (frm_vtx->hessianIndex() >= 0 && frm_vtx->hessianIndex() < (int)spinv.blockCols().size()) {
+        auto block = *spinv.block(frm_vtx->hessianIndex(), frm_vtx->hessianIndex());
+        assert(block.cols() == 6 and block.rows() == 6);
+        cov = Eigen::Map<Eigen::Matrix<double, 6, 6>>(block.data(), 6, 6);
+        cov.transposeInPlace();
+#ifdef DEBUG
+        std::cout << cov << std::endl;
+#endif
+    }
+    else if(frm_vtx->hessianIndex() < 0) {
+        spdlog::warn("Computing marginals: vertex has negative hessian index (%d). Cannot compute last pose covariance. \n", frm_vtx->hessianIndex());
+    }
+    else {
+        spdlog::warn("Computing marginals: vertex has hessian not valid (%d > block size=%d). Cannot compute last pose covariance. \n",
+               frm_vtx->hessianIndex(), (int)spinv.blockCols().size());
+    }
     return num_init_obs - num_bad_obs;
+}
+const Eigen::Matrix<double, 6, 6>& pose_optimizer_g2o::getCov() const {
+    return cov;
 }
 
 } // namespace optimize

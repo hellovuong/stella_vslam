@@ -51,6 +51,7 @@ public:
                           const std::vector<std::shared_ptr<data::landmark>>& landmarks,
                           Mat44_t& optimized_pose,
                           std::vector<bool>& outlier_flags) const override;
+    const Eigen::Matrix<double, 6, 6>& getCov() const;
 
 private:
     //! robust optimizationの試行回数
@@ -58,6 +59,8 @@ private:
 
     //! 毎回のoptimizationのiteration回数
     const unsigned int num_each_iter_ = 10;
+
+    mutable Eigen::Matrix<double, 6, 6> cov = Eigen::Matrix<double, 6, 6>::Zero();
 };
 
 } // namespace optimize
