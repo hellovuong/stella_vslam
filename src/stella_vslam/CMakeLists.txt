@@ -40,22 +40,22 @@ endif()
 
 # Check first if CSparse is built from g2o
 if(TARGET g2o::csparse)
-    set(${CXSPARSE_LIBRARIES} g2o::csparse)
-else()
-    # CXSparse for g2o
-    find_package(CXSparse)
-    if(CXSPARSE_FOUND)
-        include_directories(${CXSPARSE_INCLUDE_DIRS})
-    endif()
-    # SuiteSparse for g2o
-    if(MSVC)
-        find_package(SuiteSparse CONFIG)
-    else()
-        find_package(SuiteSparse)
-    endif()
-    if(SUITESPARSE_FOUND)
-        include_directories(${SUITESPARSE_INCLUDE_DIRS})
-    endif()
+#    set(${CXSPARSE_LIBRARIES} g2o::csparse)
+#else()
+#    # CXSparse for g2o
+#    find_package(CXSparse)
+#    if(CXSPARSE_FOUND)
+#        include_directories(${CXSPARSE_INCLUDE_DIRS})
+#    endif()
+#    # SuiteSparse for g2o
+#    if(MSVC)
+#        find_package(SuiteSparse CONFIG)
+#    else()
+#        find_package(SuiteSparse)
+#    endif()
+#    if(SUITESPARSE_FOUND)
+#        include_directories(${SUITESPARSE_INCLUDE_DIRS})
+#    endif()
 endif()
 
 # Check BoW Framework

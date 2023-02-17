@@ -97,7 +97,8 @@ foreach(EXECUTABLE_TARGET IN LISTS EXECUTABLE_TARGETS)
                           PRIVATE
                           ${PROJECT_NAME}
                           opencv_imgcodecs
-                          opencv_videoio)
+                          opencv_videoio
+                          ${FMT_LIBRARIES})
 
     # include 3rd party library headers
     target_include_directories(${EXECUTABLE_TARGET}

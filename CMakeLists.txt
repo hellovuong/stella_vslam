@@ -3,6 +3,7 @@ project(stella_vslam LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_FLAGS -Wno-unused-local-typedefs)
 
 if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
@@ -117,6 +118,9 @@ if(NOT OpenCV_FOUND)
     endif()
 endif()
 message(STATUS "Use OpenCV ${OpenCV_VERSION}")
+
+find_package(fmt REQUIRED)
+set(FMT_LIBRARIES fmt::fmt)
 
 # Check aruco module
 set(USE_ARUCO ON CACHE BOOL "Enable aruco")

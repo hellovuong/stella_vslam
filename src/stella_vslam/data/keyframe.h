@@ -25,6 +25,10 @@ namespace camera {
 class base;
 } // namespace camera
 
+namespace module::odometry {
+class IntegratedOdometryMeasurement;
+}
+
 namespace data {
 
 class frame;
@@ -35,7 +39,10 @@ class map_database;
 class bow_database;
 class camera_database;
 class orb_params_database;
-
+namespace odometry {
+struct OdometryData;
+class PoseBiasState;
+}
 class keyframe : public std::enable_shared_from_this<keyframe> {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -246,6 +253,9 @@ public:
      */
     bool will_be_erased();
 
+    const odometry::PoseBiasState& getPoseBias() const;
+    void setPoseBias(const odometry::PoseBiasState& poseBias);
+
     //-----------------------------------------
     // meta information
 
@@ -285,6 +295,9 @@ public:
     //! graph node
     std::unique_ptr<graph_node> graph_node_ = nullptr;
 
+    //! iom
+    std::shared_ptr<module::odometry::IntegratedOdometryMeasurement> iom_ptr{};
+
 private:
     //-----------------------------------------
     // camera pose
@@ -297,7 +310,8 @@ private:
     Mat44_t pose_wc_;
     //! camera center
     Vec3_t trans_wc_;
-
+    //! pose bias, update after each opt
+    odometry::PoseBiasState pose_bias;
     //-----------------------------------------
     // observations
 

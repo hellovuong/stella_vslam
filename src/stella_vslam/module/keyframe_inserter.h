@@ -11,6 +11,10 @@ namespace stella_vslam {
 
 class mapping_module;
 
+namespace module::odometry {
+class IntegratedOdometryMeasurement;
+} // namespace module::odometry
+
 namespace data {
 class map_database;
 } // namespace data
@@ -47,7 +51,8 @@ public:
     /**
      * Insert the new keyframe derived from the current frame
      */
-    std::shared_ptr<data::keyframe> insert_new_keyframe(data::map_database* map_db, data::frame& curr_frm);
+    std::shared_ptr<data::keyframe> insert_new_keyframe(data::map_database* map_db, data::frame& curr_frm,
+                                                        const std::shared_ptr<odometry::IntegratedOdometryMeasurement>& iom_ptr = nullptr);
 
 private:
     /**

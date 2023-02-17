@@ -10,6 +10,8 @@
 #include "stella_vslam/data/bow_vocabulary.h"
 #include "stella_vslam/feature/orb_params.h"
 #include "stella_vslam/util/converter.h"
+#include "stella_vslam/data/odometry_type.hpp"
+#include "stella_vslam/module/odometry/preintegration.hpp"
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
@@ -522,6 +524,17 @@ void keyframe::prepare_for_erasing(map_database* map_db, bow_database* bow_db) {
 
 bool keyframe::will_be_erased() {
     return will_be_erased_;
+}
+const odometry::PoseBiasState& keyframe::getPoseBias() const {
+    return pose_bias;
+}
+void keyframe::setPoseBias(const odometry::PoseBiasState& poseBias) {
+    pose_bias = poseBias;
+    const auto Tbc = iom_ptr->getTbc();
+    const auto Tcb = iom_ptr->getTcb();
+    // Twc = Tcb_ * Twb_b * Tbc_
+    const auto Twc = Tbc.inverse() * poseBias.getPose() * Tbc;
+    set_pose_cw(Twc.inverse().matrix());
 }
 
 } // namespace data

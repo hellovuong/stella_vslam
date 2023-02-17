@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include "stella_vslam/io/odometry_io.h"
+
 tum_rgbd_sequence::tum_rgbd_sequence(const std::string& seq_dir_path, const double min_timediff_thr) {
     // listing up the files in rgb/ and depth/ directories
     const auto rgb_img_infos = acquire_image_information(seq_dir_path, seq_dir_path + "/rgb.txt");
@@ -47,6 +49,9 @@ tum_rgbd_sequence::tum_rgbd_sequence(const std::string& seq_dir_path, const doub
         rgb_img_file_paths_.push_back(rgb_img_file_path);
         depth_img_file_paths_.push_back(nearest_depth_img_file_path);
     }
+    const auto odom_file = std::string(seq_dir_path + "/odom.txt");
+    odometry_data_ = stella_vslam::odometry_io::read_from_file<std::deque<stella_vslam::data::odometry::OdometryData>>(odom_file);
+    odometry_data_.shrink_to_fit();
 }
 
 std::vector<tum_rgbd_sequence::frame> tum_rgbd_sequence::get_frames() const {
@@ -61,7 +66,7 @@ std::vector<tum_rgbd_sequence::frame> tum_rgbd_sequence::get_frames() const {
 }
 
 std::vector<tum_rgbd_sequence::img_info> tum_rgbd_sequence::acquire_image_information(const std::string& seq_dir_path,
-                                                                                      const std::string& timestamp_file_path) const {
+                                                                                      const std::string& timestamp_file_path) {
     std::vector<tum_rgbd_sequence::img_info> img_infos;
 
     // load timestamps

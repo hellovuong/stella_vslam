@@ -9,7 +9,7 @@
 #include "stella_vslam/system.h"
 #include "stella_vslam/config.h"
 #include "stella_vslam/camera/base.h"
-#include "stella_vslam/util/yaml.h"
+#include "stella_vslam/io/odometry_io.h"
 
 #include <iostream>
 #include <algorithm>
@@ -166,6 +166,7 @@ void rgbd_tracking(const std::shared_ptr<stella_vslam::system>& slam,
                    const std::string& map_db_path) {
     tum_rgbd_sequence sequence(sequence_dir_path);
     const auto frames = sequence.get_frames();
+    auto odometry_data_s = sequence.get_odometry_data();
 
     // create a viewer object
     // and pass the frame_publisher and the map_publisher
@@ -193,6 +194,13 @@ void rgbd_tracking(const std::shared_ptr<stella_vslam::system>& slam,
             const auto& frame = frames.at(i);
             const auto rgb_img = cv::imread(frame.rgb_img_path_, cv::IMREAD_UNCHANGED);
             const auto depth_img = cv::imread(frame.depth_img_path_, cv::IMREAD_UNCHANGED);
+
+            if (i != 0) {
+                auto odom_data = stella_vslam::odometry_io::get_data_interval(odometry_data_s,
+                                                                              frames.at(i - 1).timestamp_, frame.timestamp_,
+                                                                              (i == 1));
+                slam->feed_odometry_data(odom_data);
+            }
 
             const auto tp_1 = std::chrono::steady_clock::now();
 

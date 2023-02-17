@@ -14,6 +14,7 @@
 
 #include <chrono>
 #include <unordered_map>
+#include <utility>
 
 #include <spdlog/spdlog.h>
 
@@ -33,6 +34,12 @@ tracking_module::tracking_module(const std::shared_ptr<config>& cfg, camera::bas
       frame_tracker_(camera_, pose_optimizer_, 10, initializer_.get_use_fixed_seed()),
       relocalizer_(pose_optimizer_, util::yaml_optional_ref(cfg->yaml_node_, "Relocalizer")),
       keyfrm_inserter_(util::yaml_optional_ref(cfg->yaml_node_, "KeyframeInserter")) {
+    if (util::yaml_optional_ref(cfg->yaml_node_, "Odometry")) {
+        iom_ptr_ = std::make_shared<module::odometry::IntegratedOdometryMeasurement>(util::yaml_optional_ref(cfg->yaml_node_, "Odometry"));
+    }
+    else {
+        iom_ptr_ = nullptr;
+    }
     spdlog::debug("CONSTRUCT: tracking_module");
 }
 
@@ -118,7 +125,7 @@ std::shared_ptr<Mat44_t> tracking_module::feed_frame(data::frame curr_frm) {
         std::this_thread::sleep_for(std::chrono::microseconds(5000));
     }
 
-    curr_frm_ = curr_frm;
+    curr_frm_ = std::move(curr_frm);
 
     bool succeeded = false;
     if (tracking_state_ == tracker_state_t::Initializing) {
@@ -180,10 +187,20 @@ bool tracking_module::track(bool relocalization_is_needed) {
     std::lock_guard<std::mutex> lock2(mtx_last_frm_);
     std::lock_guard<std::mutex> lock3(mtx_stop_keyframe_insertion_);
 
+    //    std::thread iom_thread;
+    if (!relocalize_by_pose_is_requested() and !relocalization_is_needed and !odometry_data_.empty()) {
+        //        iom_thread = std::thread([this]() { preintegration(); });
+        preintegration();
+    }
+
     // update the camera pose of the last frame
     // because the mapping module might optimize the camera pose of the last frame's reference keyframe
     SPDLOG_TRACE("tracking_module: update the camera pose of the last frame (curr_frm_={})", curr_frm_.id_);
     update_last_frame();
+
+    //    if (!relocalize_by_pose_is_requested() and !relocalization_is_needed and !odometry_data_.empty()) {
+    //        iom_thread.join();
+    //    }
 
     // set the reference keyframe of the current frame
     curr_frm_.ref_keyfrm_ = last_frm_.ref_keyfrm_;
@@ -261,7 +278,7 @@ bool tracking_module::initialize() {
         return false;
     }
 
-    // pass all of the keyframes to the mapping module
+    // pass all the keyframes to the mapping module
     assert(!is_stopped_keyframe_insertion_);
     for (const auto& keyfrm : curr_frm_.ref_keyfrm_->graph_node_->get_keyframes_from_root()) {
         mapper_->queue_keyframe(keyfrm);
@@ -543,8 +560,28 @@ bool tracking_module::new_keyframe_is_needed(unsigned int num_tracked_lms,
 }
 
 void tracking_module::insert_new_keyframe() {
-    // insert the new keyframe
-    const auto ref_keyfrm = keyfrm_inserter_.insert_new_keyframe(map_db_, curr_frm_);
+    // save updated bias before move iom_ptr_'s ownership to newly created keyframe
+    Sophus::SE3d Tbc;
+    Eigen::Vector3d updated_bv;
+    Eigen::Vector3d updated_bw;
+    Eigen::DiagonalMatrix<double, 6> sigma_noise;
+    Eigen::DiagonalMatrix<double, 6> sigma_noise_random_walk;
+    bool has_iom_ptr = false;
+    if (iom_ptr_) {
+        Tbc = iom_ptr_->getTbc();
+        updated_bv = iom_ptr_->getUpdatedBiasV();
+        updated_bw = iom_ptr_->getUpdatedBiasW();
+        sigma_noise = iom_ptr_->getSigmaNoise();
+        sigma_noise_random_walk = iom_ptr_->getSigmaNoiseRandomWalk();
+        has_iom_ptr = true;
+    }
+    // insert the new keyframe, after this iom_ptr is nullptr
+    const auto ref_keyfrm = keyfrm_inserter_.insert_new_keyframe(map_db_, curr_frm_, iom_ptr_);
+    // restart integration with updated bias
+    if (has_iom_ptr) {
+        iom_ptr_ = std::make_shared<module::odometry::IntegratedOdometryMeasurement>(Tbc, updated_bv, updated_bw,
+                                                                                     sigma_noise, sigma_noise_random_walk);
+    }
     // set the reference keyframe with the new keyframe
     if (ref_keyfrm) {
         curr_frm_.ref_keyfrm_ = ref_keyfrm;
@@ -621,6 +658,19 @@ bool tracking_module::pause_if_requested() {
     }
     else {
         return false;
+    }
+}
+void tracking_module::preintegration() {
+    if (odometry_data_.size() < 2) {
+        spdlog::warn("odometry data is empty! skip preintegration");
+        return;
+    }
+
+    if (iom_ptr_) {
+        iom_ptr_->integrateMeasurements(odometry_data_);
+    }
+    else {
+        spdlog::error("IntegratedOdometryMeasurement Ptr (iom_ptr_) is not initialized or be deleted");
     }
 }
 

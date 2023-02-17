@@ -39,8 +39,8 @@ public:
 
     frame() = default;
 
-    bool operator==(const frame& frm) { return this->id_ == frm.id_; }
-    bool operator!=(const frame& frm) { return !(*this == frm); }
+    bool operator==(const frame& frm) const { return this->id_ == frm.id_; }
+    bool operator!=(const frame& frm) const { return !(*this == frm); }
 
     /**
      * Constructor for monocular frame
@@ -166,13 +166,13 @@ public:
     Vec3_t triangulate_stereo(const unsigned int idx) const;
 
     //! current frame ID
-    unsigned int id_;
+    unsigned int id_{};
 
     //! next frame ID
     static std::atomic<unsigned int> next_id_;
 
     //! timestamp
-    double timestamp_;
+    double timestamp_{};
 
     //! camera model
     camera::base* camera_ = nullptr;

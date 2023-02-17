@@ -26,6 +26,12 @@ class map_database;
 class bow_database;
 } // namespace data
 
+namespace data::odometry{
+struct OdometryData;
+}
+namespace module::odometry {
+class IntegratedOdometryMeasurement;
+}
 // tracker state
 enum class tracker_state_t {
     Initializing,
@@ -176,6 +182,9 @@ protected:
 
     //! Insert the new keyframe derived from the current frame
     void insert_new_keyframe();
+
+    //! preintegration
+    void preintegration();
 
     //! mapping module
     mapping_module* mapper_ = nullptr;

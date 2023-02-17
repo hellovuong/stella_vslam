@@ -17,9 +17,10 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/random_array.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/stereo_rectifier.cc
-               ${CMAKE_CURRENT_SOURCE_DIR}/yaml.cc)
+               ${CMAKE_CURRENT_SOURCE_DIR}/yaml.cc
+               ${CMAKE_CURRENT_SOURCE_DIR}/sophus_utils.hpp)
 
 # Install headers
-file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
+file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
 install(FILES ${HEADERS}
         DESTINATION ${STELLA_VSLAM_INCLUDE_INSTALL_DIR}/util)

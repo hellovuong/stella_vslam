@@ -18,11 +18,10 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/transform_optimizer.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/graph_optimizer.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/global_bundle_adjuster.cc
-               ${CMAKE_CURRENT_SOURCE_DIR}/terminate_action.cc
-               ${CMAKE_CURRENT_SOURCE_DIR}/sophus_utils.hpp)
+               ${CMAKE_CURRENT_SOURCE_DIR}/terminate_action.cc)
 
 # Install headers
-file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
+file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
 install(FILES ${HEADERS}
         DESTINATION ${STELLA_VSLAM_INCLUDE_INSTALL_DIR}/optimize)
 

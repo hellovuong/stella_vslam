@@ -32,15 +32,16 @@ Camera:
 # Odometry #
 #==========#
 Odometry:
-  Tbc: [-0.00113729264458,  0.999965055267,     0.00828219834348,   0.0545104875654,
-        -0.00206245548802,  -0.00828453162111,  0.999963555742,     -0.915839044531,
-        0.999997226418,     0.00112016953136,   0.00207180535294,   -0.228417979642,
-        0,                  0,                  0,                  1]
-  frequency: 200
+  Tbc: [    1.0, 0.0, 0.0, 0.1,
+            0.0, 0.1, 0.0, 0.2,
+            0.0, 0.0, 1.0, 0.3,
+            0.0, 0.0, 0.0, 1.0]
+  frequency: 10
   noiseLinearVel: 1e-3
   noiseAngularVel: 1e-3
-  linearVelWalk: 1e-4
-  angularVelWalk: 1e-4
+  LinearVelWalk: 1e-4
+  AngularVelWalk: 1e-4
+
 
 #=====================#
 # Tracking Parameters #
@@ -58,8 +59,8 @@ Feature:
   name: "default ORB feature extraction setting"
   scale_factor: 1.2
   num_levels: 8
-  ini_fast_threshold: 20
-  min_fast_threshold: 7
+  ini_fast_threshold: 10
+  min_fast_threshold: 5
 
 #====================#
 # Mapping Parameters #

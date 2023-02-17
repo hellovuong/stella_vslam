@@ -4,6 +4,7 @@
 #include "stella_vslam/data/map_database.h"
 #include "stella_vslam/marker_model/base.h"
 #include "stella_vslam/module/keyframe_inserter.h"
+#include "stella_vslam/module/odometry/preintegration.hpp"
 
 #include <spdlog/spdlog.h>
 
@@ -104,7 +105,8 @@ bool keyframe_inserter::new_keyframe_is_needed(data::map_database* map_db,
 }
 
 std::shared_ptr<data::keyframe> keyframe_inserter::insert_new_keyframe(data::map_database* map_db,
-                                                                       data::frame& curr_frm) {
+                                                                       data::frame& curr_frm,
+                                                                       const std::shared_ptr<odometry::IntegratedOdometryMeasurement>& iom_ptr) {
     auto keyfrm = data::keyframe::make_keyframe(map_db->next_keyframe_id_++, curr_frm);
     keyfrm->update_landmarks();
 
@@ -183,7 +185,7 @@ std::shared_ptr<data::keyframe> keyframe_inserter::insert_new_keyframe(data::map
 
         map_db->add_landmark(lm);
     }
-
+    keyfrm->iom_ptr = iom_ptr;
     // Queue up the keyframe to the mapping module
     queue_keyframe(keyfrm);
     return keyfrm;

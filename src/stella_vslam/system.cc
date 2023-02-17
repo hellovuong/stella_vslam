@@ -384,7 +384,9 @@ data::frame system::create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& dep
 
     // Extract ORB feature
     keypts_.clear();
-    extractor_left_->extract(img_gray, mask, keypts_, frm_obs.descriptors_);
+    if (extractor_left_) {
+        extractor_left_->extract(img_gray, mask, keypts_, frm_obs.descriptors_);
+    }
     frm_obs.num_keypts_ = keypts_.size();
     if (keypts_.empty()) {
         spdlog::warn("preprocess: cannot extract any keypoints");

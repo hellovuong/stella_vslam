@@ -30,6 +30,9 @@ class camera_database;
 class orb_params_database;
 class map_database;
 class bow_database;
+namespace odometry {
+struct OdometryData;
+}
 } // namespace data
 
 namespace feature {

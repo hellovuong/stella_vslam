@@ -8,7 +8,9 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/map_database_io_sqlite3.h
                ${CMAKE_CURRENT_SOURCE_DIR}/trajectory_io.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/map_database_io_msgpack.cc
-               ${CMAKE_CURRENT_SOURCE_DIR}/map_database_io_sqlite3.cc)
+               ${CMAKE_CURRENT_SOURCE_DIR}/map_database_io_sqlite3.cc
+               ${CMAKE_CURRENT_SOURCE_DIR}/odometry_io.cpp
+               ${CMAKE_CURRENT_SOURCE_DIR}/odometry_io.h)
 
 # Install headers
 file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
