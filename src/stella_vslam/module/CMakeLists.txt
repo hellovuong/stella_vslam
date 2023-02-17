@@ -19,6 +19,7 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/local_map_updater.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/loop_detector.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/loop_bundle_adjuster.cc)
+add_subdirectory(odometry)
 
 # Install headers
 file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")

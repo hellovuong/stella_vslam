@@ -111,6 +111,8 @@ public:
     //! Resume the tracking module
     void resume();
 
+    void feed_odometry_data(const std::deque<data::odometry::OdometryData>& odometry_data);
+
     //-----------------------------------------
     // configurations
 
@@ -206,6 +208,9 @@ protected:
     //! pose optimizer
     std::shared_ptr<optimize::pose_optimizer> pose_optimizer_ = nullptr;
 
+    //! odometry preintegration
+    std::shared_ptr<module::odometry::IntegratedOdometryMeasurement> iom_ptr_;
+
     //! frame tracker for current frame
     const module::frame_tracker frame_tracker_;
 
@@ -268,6 +273,9 @@ protected:
 
     //! Pause of the tracking module is requested or not
     bool pause_is_requested_ = false;
+
+    //! deque for odometry data from last frame to current frame
+    std::deque<data::odometry::OdometryData> odometry_data_;
 
     //-----------------------------------------
     // force relocalization

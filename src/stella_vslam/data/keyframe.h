@@ -9,6 +9,7 @@
 #include "stella_vslam/data/frame_observation.h"
 #include "stella_vslam/data/marker2d.h"
 #include "stella_vslam/data/bow_vocabulary_fwd.h"
+#include "odometry_type.hpp"
 
 #include <set>
 #include <mutex>

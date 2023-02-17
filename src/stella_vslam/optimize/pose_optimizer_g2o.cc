@@ -17,8 +17,12 @@
 #include <g2o/solvers/eigen/linear_solver_eigen.h>
 #include <g2o/core/optimization_algorithm_levenberg.h>
 
-namespace stella_vslam {
-namespace optimize {
+#include <so2.hpp>
+#include "stella_vslam/util/sophus_utils.hpp"
+#include "stella_vslam/module/odometry/preintegration.hpp"
+#include "stella_vslam/data/odometry_type.hpp"
+
+namespace stella_vslam::optimize {
 
 pose_optimizer_g2o::pose_optimizer_g2o(const unsigned int num_trials, const unsigned int num_each_iter)
     : num_trials_(num_trials), num_each_iter_(num_each_iter) {}
@@ -169,5 +173,4 @@ unsigned int pose_optimizer_g2o::optimize(const Mat44_t& cam_pose_cw, const data
     return num_init_obs - num_bad_obs;
 }
 
-} // namespace optimize
 } // namespace stella_vslam

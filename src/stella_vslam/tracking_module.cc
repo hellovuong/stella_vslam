@@ -10,6 +10,7 @@
 #include "stella_vslam/match/projection.h"
 #include "stella_vslam/module/local_map_updater.h"
 #include "stella_vslam/optimize/pose_optimizer_factory.h"
+#include "stella_vslam/module/odometry/preintegration.hpp"
 #include "stella_vslam/util/yaml.h"
 
 #include <chrono>
@@ -540,10 +541,10 @@ void tracking_module::search_local_landmarks() {
     // acquire more 2D-3D matches by projecting the local landmarks to the current frame
     match::projection projection_matcher(0.8);
     const float margin = (curr_frm_.id_ < last_reloc_frm_id_ + 2)
-                             ? 20.0
+                             ? 20.0f
                              : ((camera_->setup_type_ == camera::setup_type_t::RGBD)
-                                    ? 10.0
-                                    : 5.0);
+                                    ? 10.0f
+                                    : 5.0f);
     projection_matcher.match_frame_and_landmarks(curr_frm_, local_landmarks_, lm_to_reproj, lm_to_x_right, lm_to_scale, margin);
 }
 
@@ -586,6 +587,10 @@ void tracking_module::insert_new_keyframe() {
     if (ref_keyfrm) {
         curr_frm_.ref_keyfrm_ = ref_keyfrm;
     }
+}
+
+void tracking_module::feed_odometry_data(const std::deque<data::odometry::OdometryData>& odometry_data) {
+    odometry_data_ = odometry_data;
 }
 
 std::future<void> tracking_module::async_stop_keyframe_insertion() {

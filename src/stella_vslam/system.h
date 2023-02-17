@@ -10,6 +10,7 @@
 #include <mutex>
 #include <atomic>
 #include <memory>
+#include <deque>
 
 #include <opencv2/core/mat.hpp>
 
@@ -144,6 +145,7 @@ public:
     data::frame create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& depthmap, const double timestamp, const cv::Mat& mask);
     std::shared_ptr<Mat44_t> feed_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& depthmap, const double timestamp, const cv::Mat& mask = cv::Mat{});
 
+    void feed_odometry_data(const std::deque<data::odometry::OdometryData>& odometry_data);
     //-----------------------------------------
     // pose initializing/updating
 

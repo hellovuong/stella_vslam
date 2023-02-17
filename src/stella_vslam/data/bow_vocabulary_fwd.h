@@ -20,8 +20,7 @@ struct BoWFeatVector;
 } // namespace fbow
 #endif // USE_DBOW2
 
-namespace stella_vslam {
-namespace data {
+namespace stella_vslam::data {
 
 #ifdef USE_DBOW2
 
@@ -38,7 +37,6 @@ typedef fbow::BoWFeatVector bow_feature_vector;
 
 #endif // USE_DBOW2
 
-} // namespace data
 } // namespace stella_vslam
 
 #endif // STELLA_VSLAM_DATA_BOW_VOCABULARY_FWD_H

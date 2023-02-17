@@ -22,6 +22,7 @@
 #include "stella_vslam/util/converter.h"
 #include "stella_vslam/util/image_converter.h"
 #include "stella_vslam/util/yaml.h"
+#include "stella_vslam/data/odometry_type.hpp"
 
 #include <thread>
 
@@ -429,7 +430,7 @@ data::frame system::create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& dep
         marker_detector_->detect(img_gray, markers_2d);
     }
 
-    return data::frame(timestamp, camera_, orb_params_, frm_obs, std::move(markers_2d));
+    return {timestamp, camera_, orb_params_, frm_obs, markers_2d};
 }
 
 std::shared_ptr<Mat44_t> system::feed_monocular_frame(const cv::Mat& img, const double timestamp, const cv::Mat& mask) {
@@ -459,6 +460,11 @@ std::shared_ptr<Mat44_t> system::feed_RGBD_frame(const cv::Mat& rgb_img, const c
     return feed_frame(create_RGBD_frame(rgb_img, depthmap, timestamp, mask), rgb_img);
 }
 
+void system::feed_odometry_data(const std::deque<data::odometry::OdometryData>& odometry_data) {
+    if(tracker_)
+        tracker_->feed_odometry_data(odometry_data);
+}
+
 std::shared_ptr<Mat44_t> system::feed_frame(const data::frame& frm, const cv::Mat& img) {
     check_reset_request();
 
@@ -467,14 +473,14 @@ std::shared_ptr<Mat44_t> system::feed_frame(const data::frame& frm, const cv::Ma
     const auto cam_pose_wc = tracker_->feed_frame(frm);
 
     const auto end = std::chrono::system_clock::now();
-    double elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
     frame_publisher_->update(tracker_->curr_frm_.get_landmarks(),
                              !mapper_->is_paused(),
                              tracker_->tracking_state_,
                              keypts_,
                              img,
-                             elapsed_ms);
+                             (double)elapsed_ms);
     if (tracker_->tracking_state_ == tracker_state_t::Tracking && cam_pose_wc) {
         map_publisher_->set_current_cam_pose(util::converter::inverse_pose(*cam_pose_wc));
     }
