@@ -79,7 +79,7 @@ RUN set -x && \
 ENV Eigen3_DIR=${CMAKE_INSTALL_PREFIX}/share/eigen3/cmake
 
 # g2o
-ARG G2O_COMMIT=9b41a4ea5ade8e1250b9c1b279f3a9c098811b5a
+ARG G2O_COMMIT=ed40a5bb028566fd56a78fd7b04921b613492d6f
 WORKDIR /tmp
 RUN set -x && \
   git clone https://github.com/RainerKuemmerle/g2o.git && \
@@ -127,18 +127,25 @@ RUN set -x && \
 ENV gtsam_DIR=${CMAKE_INSTALL_PREFIX}/lib/cmake/gtsam
 
 # OpenCV
+<<<<<<< HEAD
 ARG OPENCV_VERSION=4.5.5
+=======
+ARG OPENCV_VERSION=4.7.0
+>>>>>>> 19a36acbddc5edb7c5393713b2f5b4f0f8a8c0be
 WORKDIR /tmp
 RUN set -x && \
   wget -q https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip && \
   unzip -q ${OPENCV_VERSION}.zip && \
   rm -rf ${OPENCV_VERSION}.zip && \
+<<<<<<< HEAD
   wget -q https://github.com/opencv/opencv_contrib/archive/refs/tags/${OPENCV_VERSION}.zip -O opencv_contrib-${OPENCV_VERSION}.zip && \
   unzip -q opencv_contrib-${OPENCV_VERSION}.zip && \
   rm -rf opencv_contrib-${OPENCV_VERSION}.zip && \
   mkdir extra && \
   mv opencv_contrib-${OPENCV_VERSION}/modules/aruco extra && \
   rm -rf opencv_contrib-${OPENCV_VERSION} && \
+=======
+>>>>>>> 19a36acbddc5edb7c5393713b2f5b4f0f8a8c0be
   cd opencv-${OPENCV_VERSION} && \
   mkdir -p build && \
   cd build && \
@@ -160,8 +167,13 @@ RUN set -x && \
     -DENABLE_FAST_MATH=ON \
     -DWITH_EIGEN=ON \
     -DWITH_FFMPEG=ON \
+<<<<<<< HEAD
     -DWITH_OPENMP=ON \
     -DOPENCV_EXTRA_MODULES_PATH=/tmp/extra \
+=======
+    -DWITH_TBB=ON \
+    -DWITH_OPENMP=ON \
+>>>>>>> 19a36acbddc5edb7c5393713b2f5b4f0f8a8c0be
     .. && \
   make -j${NUM_THREADS} && \
   make install && \

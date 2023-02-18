@@ -1,7 +1,7 @@
 #include "stella_vslam/data/frame.h"
 #include "stella_vslam/data/keyframe.h"
 #include "stella_vslam/data/landmark.h"
-#include "stella_vslam/optimize/pose_optimizer_g2o.h"
+#include "stella_vslam/optimize/pose_optimizer.h"
 #include "stella_vslam/optimize/terminate_action.h"
 #include "stella_vslam/optimize/internal/se3/pose_opt_edge_wrapper.h"
 #include "stella_vslam/util/converter.h"
