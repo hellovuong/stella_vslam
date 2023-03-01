@@ -284,7 +284,8 @@ public:
 
     //! graph node
     std::unique_ptr<graph_node> graph_node_ = nullptr;
-
+    //
+    cv::Mat img;
 private:
     //-----------------------------------------
     // camera pose

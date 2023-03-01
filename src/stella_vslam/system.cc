@@ -465,7 +465,7 @@ std::shared_ptr<Mat44_t> system::feed_frame(const data::frame& frm, const cv::Ma
     const auto start = std::chrono::system_clock::now();
 
     const auto cam_pose_wc = tracker_->feed_frame(frm);
-
+    tracker_->curr_img_ = img.clone();
     const auto end = std::chrono::system_clock::now();
     double elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 

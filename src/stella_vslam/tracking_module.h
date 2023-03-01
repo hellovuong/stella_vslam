@@ -132,7 +132,7 @@ public:
 
     //! current frame and its image
     data::frame curr_frm_;
-
+    cv::Mat curr_img_;
 protected:
     //-----------------------------------------
     // tracking processes

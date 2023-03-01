@@ -548,6 +548,7 @@ void tracking_module::insert_new_keyframe() {
     // set the reference keyframe with the new keyframe
     if (ref_keyfrm) {
         curr_frm_.ref_keyfrm_ = ref_keyfrm;
+        ref_keyfrm->img = curr_img_.clone();
     }
 }
 

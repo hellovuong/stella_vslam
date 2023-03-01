@@ -170,6 +170,7 @@ void global_optimization_module::run() {
 
             // pass the current keyframe to the loop detector
             loop_detector_->set_current_keyframe(cur_keyfrm_);
+            loopDetectorHloc_.set_current_keyframe(cur_keyfrm_);
 
             // detect some loop candidate with BoW
             if (!loop_detector_->detect_loop_candidates()) {

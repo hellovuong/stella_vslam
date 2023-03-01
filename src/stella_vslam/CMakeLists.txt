@@ -38,6 +38,18 @@ else()
     message(STATUS "gtsam: disabled")
 endif()
 
+# set your own libtorch path
+set(TORCH_PATH /home/vuong/Dev/prv/libtorch/share/cmake/Torch)
+if (TORCH_PATH)
+    message("TORCH_PATH set to: ${TORCH_PATH}")
+    set(Torch_DIR ${TORCH_PATH})
+else ()
+    message(FATAL_ERROR "Need to specify Torch path, e.g., pytorch/torch/share/cmake/Torch ")
+endif ()
+
+find_package(PythonInterp REQUIRED)
+find_package(Torch REQUIRED)
+
 # Check first if CSparse is built from g2o
 if(TARGET g2o::csparse)
     set(${CXSPARSE_LIBRARIES} g2o::csparse)
@@ -210,7 +222,9 @@ target_link_libraries(${PROJECT_NAME}
                       ${SUITESPARSE_LIBRARIES}
                       ${BoW_LIBRARY}
                       PRIVATE
-                      ${LAPACK_LIBRARIES})
+                      ${LAPACK_LIBRARIES}
+                      ${CUDA_LIBRARIES}
+                      ${TORCH_LIBRARIES})
 
 # ----- Install configuration -----
 
@@ -241,6 +255,7 @@ install(DIRECTORY ${spdlog_INCLUDE_DIR}
 add_subdirectory(camera)
 add_subdirectory(data)
 add_subdirectory(feature)
+add_subdirectory(hloc)
 add_subdirectory(initialize)
 add_subdirectory(io)
 add_subdirectory(marker_detector)

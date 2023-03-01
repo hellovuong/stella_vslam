@@ -5,6 +5,7 @@
 #include "stella_vslam/data/bow_vocabulary.h"
 #include "stella_vslam/module/type.h"
 #include "stella_vslam/module/loop_detector.h"
+#include "stella_vslam/module/loop_detector_hloc.h"
 #include "stella_vslam/module/loop_bundle_adjuster.h"
 #include "stella_vslam/optimize/graph_optimizer.h"
 
@@ -262,6 +263,8 @@ private:
 
     //! thread for running loop BA
     std::unique_ptr<std::thread> thread_for_loop_BA_ = nullptr;
+
+    module::loop_detector_hloc loopDetectorHloc_ = {};
 };
 
 } // namespace stella_vslam
