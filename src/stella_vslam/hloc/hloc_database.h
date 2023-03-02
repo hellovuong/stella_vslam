@@ -171,7 +171,7 @@ public:
     cv::Mat window_local_descriptors{};
     cv::Mat global_descriptors_{};
 };
-}
+} // namespace hloc
 
 } // namespace stella_vslam
 #endif // STELLA_VSLAM_HLOC_DATABASE_H

@@ -28,12 +28,10 @@ void SuperPoint::IExtract(const cv::Mat& image, std::vector<cv::Point2f>& kpts, 
     scrs.clear();
 
     cv::Mat image_gray;
-    if (image.channels() == 3)
-    {
+    if (image.channels() == 3) {
         cv::cvtColor(image, image_gray, cv::COLOR_RGB2GRAY);
     }
-    else
-    {
+    else {
         image_gray = image.clone();
     }
     // resize image if size > max size (1024)
@@ -96,8 +94,7 @@ void NetVLAD::Extract(const cv::Mat& image, cv::Mat& desc) {
 
 void NetVLAD::IExtract(const cv::Mat& image, cv::Mat& desc) {
     cv::Mat _image = image.clone();
-    if (_image.channels() == 1)
-    {
+    if (_image.channels() == 1) {
         cv::cvtColor(_image, _image, cv::COLOR_GRAY2BGR);
     }
     else {
@@ -110,8 +107,8 @@ void NetVLAD::IExtract(const cv::Mat& image, cv::Mat& desc) {
     int img_height_ori = _image.rows, img_height_new = _image.rows;
     if (std::max(img_width_ori, img_height_ori) > 1024) {
         scale = 1024.f / std::max(img_width_ori, img_height_ori);
-//        img_width_new = img_width_ori * scale;
-//        img_height_new = img_height_ori * scale;
+        //        img_width_new = img_width_ori * scale;
+        //        img_height_new = img_height_ori * scale;
         img_width_new = 300;
         img_height_new = 300;
         cv::resize(_image, _image, cv::Size(img_width_new, img_height_new), 0, 0, cv::INTER_LINEAR);

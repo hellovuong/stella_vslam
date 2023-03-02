@@ -42,8 +42,8 @@ public:
      * Detect loop candidates using Hloc
      */
     bool detect_loop_candidates();
-private:
 
+private:
     /**
      * called by detect_loop_candidates
      */

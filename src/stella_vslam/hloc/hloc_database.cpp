@@ -5,12 +5,12 @@
 #include "hloc_database.h"
 
 #include <utility>
-stella_vslam::hloc::keyframe::keyframe(std::shared_ptr<data::keyframe> keyfrm) : keyfrm_(std::move(keyfrm)) {
+stella_vslam::hloc::keyframe::keyframe(std::shared_ptr<data::keyframe> keyfrm)
+    : keyfrm_(std::move(keyfrm)) {
     computeWindow();
     computeNew(point_2d_uv_, scores_);
 }
 void stella_vslam::hloc::keyframe::computeWindow() {
-
 }
 void stella_vslam::hloc::keyframe::computeNew(std::vector<cv::Point2f>& keypoints, std::vector<float>& scores) {
     // extract keypoint and compute local descriptor

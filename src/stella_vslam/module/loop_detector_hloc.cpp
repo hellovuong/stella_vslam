@@ -49,7 +49,6 @@ bool loop_detector_hloc::detect_loop_candidates_impl() {
         last_loop_count++;
     }
 
-
     bool find_loop = false;
     cv::Mat loop_result;
     if (DEBUG_IMAGE) {
@@ -70,7 +69,7 @@ bool loop_detector_hloc::detect_loop_candidates_impl() {
             last_loop_count = 0;
         }
     }
-    if(DEBUG_IMAGE) {
+    if (DEBUG_IMAGE) {
         cv::imshow("loop_result", loop_result);
         cv::waitKey(100);
     }
