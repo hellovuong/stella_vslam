@@ -39,7 +39,7 @@ else()
 endif()
 
 # set your own libtorch path
-set(TORCH_PATH /home/vuong/Dev/prv/libtorch/share/cmake/Torch)
+set(TORCH_PATH /home/vuong/Code/libtorch/share/cmake/Torch)
 if (TORCH_PATH)
     message("TORCH_PATH set to: ${TORCH_PATH}")
     set(Torch_DIR ${TORCH_PATH})
@@ -207,6 +207,7 @@ target_link_libraries(${PROJECT_NAME}
                       ${SQLite3_LIBRARIES}
                       opencv_core
                       opencv_features2d
+                      opencv_xfeature2d
                       opencv_calib3d
                       "$<$<BOOL:${USE_ARUCO}>:opencv_aruco>"
                       g2o::core
