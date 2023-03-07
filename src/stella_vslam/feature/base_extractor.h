@@ -2,8 +2,8 @@
 // Created by vuong on 3/7/23.
 //
 
-#ifndef STELLA_VSLAM_BASE_FEATURE_H
-#define STELLA_VSLAM_BASE_FEATURE_H
+#ifndef STELLA_VSLAM_FEATURE_BASE_FEATURE_H
+#define STELLA_VSLAM_FEATURE_BASE_FEATURE_H
 #include <opencv2/core/mat.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -30,4 +30,4 @@ protected:
     cv::Mat rect_mask_;
 };
 } // namespace stella_vslam::feature
-#endif // STELLA_VSLAM_BASE_FEATURE_H
+#endif // STELLA_VSLAM_FEATURE_BASE_FEATURE_H
