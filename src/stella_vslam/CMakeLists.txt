@@ -39,7 +39,7 @@ else()
 endif()
 
 # set your own libtorch path
-set(TORCH_PATH /home/vuong/Code/libtorch/share/cmake/Torch)
+set(TORCH_PATH "/home/vuong/Code/libtorch/share/cmake/Torch" CACHE STRING "Torch lib path")
 if (TORCH_PATH)
     message("TORCH_PATH set to: ${TORCH_PATH}")
     set(Torch_DIR ${TORCH_PATH})
