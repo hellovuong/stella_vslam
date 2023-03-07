@@ -1,6 +1,7 @@
 #ifndef STELLA_VSLAM_FEATURE_ORB_EXTRACTOR_H
 #define STELLA_VSLAM_FEATURE_ORB_EXTRACTOR_H
 
+#include "stella_vslam/feature/base_extractor.h"
 #include "stella_vslam/feature/orb_params.h"
 #include "stella_vslam/feature/orb_extractor_node.h"
 #include "stella_vslam/feature/orb_impl.h"
@@ -8,10 +9,8 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
 
-namespace stella_vslam {
-namespace feature {
-
-class orb_extractor {
+namespace stella_vslam::feature {
+class orb_extractor : public base_extractor {
 public:
     orb_extractor() = delete;
 
@@ -25,7 +24,7 @@ public:
 
     //! Extract keypoints and each descriptor of them
     void extract(const cv::_InputArray& in_image, const cv::_InputArray& in_image_mask,
-                 std::vector<cv::KeyPoint>& keypts, const cv::_OutputArray& out_descriptors);
+                 std::vector<cv::KeyPoint>& keypts, const cv::_OutputArray& out_descriptors) override;
 
     //! parameters for ORB extraction
     const orb_params* orb_params_;
@@ -34,8 +33,8 @@ public:
     //! Each areas are denoted as form of [x_min / cols, x_max / cols, y_min / rows, y_max / rows]
     std::vector<std::vector<float>> mask_rects_;
 
-    //! Image pyramid
-    std::vector<cv::Mat> image_pyramid_;
+//    //! Image pyramid
+//    std::vector<cv::Mat> image_pyramid_;
 
 private:
     //! Calculate scale factors and sigmas
@@ -89,12 +88,11 @@ private:
 
     //! rectangle mask has been already initialized or not
     bool mask_is_initialized_ = false;
-    cv::Mat rect_mask_;
+//    cv::Mat rect_mask_;
 
     orb_impl orb_impl_;
 };
 
-} // namespace feature
 } // namespace stella_vslam
 
 #endif // STELLA_VSLAM_FEATURE_ORB_EXTRACTOR_H

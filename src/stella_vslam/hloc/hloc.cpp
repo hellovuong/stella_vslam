@@ -17,15 +17,14 @@ SuperPoint::SuperPoint() {
     spdlog::info("Loaded SuperPoint");
 }
 
-void SuperPoint::Extract(const cv::Mat& image, std::vector<cv::Point2f>& kpts, std::vector<float>& scrs, cv::Mat& desc) {
+void SuperPoint::Extract(const cv::Mat& image, std::vector<cv::KeyPoint>& kpts, cv::Mat& desc) {
     // TicToc tt;
-    self().IExtract(image, kpts, scrs, desc);
+    self().IExtract(image, kpts, desc);
     // printf("SuperPoint %fms\n", tt.toc());
 }
 
-void SuperPoint::IExtract(const cv::Mat& image, std::vector<cv::Point2f>& kpts, std::vector<float>& scrs, cv::Mat& desc) {
+void SuperPoint::IExtract(const cv::Mat& image, std::vector<cv::KeyPoint>& kpts, cv::Mat& desc) {
     kpts.clear();
-    scrs.clear();
 
     cv::Mat image_gray;
     if (image.channels() == 3) {
@@ -64,12 +63,9 @@ void SuperPoint::IExtract(const cv::Mat& image, std::vector<cv::Point2f>& kpts, 
     keypoints = (keypoints / scale).round();
     // convert torch::Tensor to std::vector<cv::KeyPoint>
     for (int i = 0; i < keypoints.size(0); i++) {
-        kpts.emplace_back(keypoints[i][0].item<float>(), keypoints[i][1].item<float>());
+        kpts.emplace_back(keypoints[i][0].item<float>(), keypoints[i][1].item<float>(), 0, -1, scores[i].item<float>());
     }
-    // convert torch::Tensor to std::vector<std::float>
-    for (int i = 0; i < scores.size(0); i++) {
-        scrs.push_back(scores[i].item<float>());
-    }
+
     // convert torch::Tensor to cv::Mat
     cv::Mat mat_desc(descriptors.size(0), descriptors.size(1), CV_32FC1);
     std::memcpy(mat_desc.data, descriptors.data_ptr(), sizeof(float) * descriptors.numel());

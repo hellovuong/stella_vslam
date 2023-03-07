@@ -22,8 +22,7 @@ public:
     static SuperPoint& self();
     static void Extract(
         const cv::Mat& image,
-        std::vector<cv::Point2f>& kpts,
-        std::vector<float>& scrs,
+        std::vector<cv::KeyPoint>& kpts,
         cv::Mat& desc);
 
 private:
@@ -31,8 +30,7 @@ private:
     SuperPoint();
     void IExtract(
         const cv::Mat& image,
-        std::vector<cv::Point2f>& kpts,
-        std::vector<float>& scrs,
+        std::vector<cv::KeyPoint>& kpts,
         cv::Mat& desc);
 };
 
