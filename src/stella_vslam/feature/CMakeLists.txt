@@ -7,11 +7,13 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_impl.h
                ${CMAKE_CURRENT_SOURCE_DIR}/sp_extractor.h
                ${CMAKE_CURRENT_SOURCE_DIR}/base_extractor.h
+               ${CMAKE_CURRENT_SOURCE_DIR}/sp_trt.h
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_params.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_extractor.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_extractor_node.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_impl.cc
-               ${CMAKE_CURRENT_SOURCE_DIR}/sp_extractor.cpp)
+               ${CMAKE_CURRENT_SOURCE_DIR}/sp_extractor.cpp
+               ${CMAKE_CURRENT_SOURCE_DIR}/sp_trt.cpp)
 
 # Install headers
 file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
