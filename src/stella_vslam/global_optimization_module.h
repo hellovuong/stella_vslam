@@ -111,6 +111,8 @@ public:
 
     bool request_loop_closure(unsigned int keyfrm1_id, unsigned int keyfrm2_id);
 
+    const std::shared_ptr<module::loop_detector_hloc>& getLoopDetectorHloc() const;
+
 private:
     //-----------------------------------------
     // main process
@@ -264,7 +266,7 @@ private:
     //! thread for running loop BA
     std::unique_ptr<std::thread> thread_for_loop_BA_ = nullptr;
 
-    module::loop_detector_hloc loopDetectorHloc_ = {};
+    std::shared_ptr<module::loop_detector_hloc> loopDetectorHloc_ = std::make_shared<module::loop_detector_hloc>();
 };
 
 } // namespace stella_vslam
