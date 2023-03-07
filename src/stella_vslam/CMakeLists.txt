@@ -12,6 +12,9 @@ set(tinycolormap_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/3rd/tinycolormap/include)
 # sqlite3
 find_package(SQLite3 REQUIRED)
 
+# We require CUDA, OpenCV, and TensorRT
+find_package(TensorRT REQUIRED)
+
 # g2o
 find_package(g2o REQUIRED
              COMPONENTS
@@ -159,6 +162,15 @@ else()
     message(FATAL_ERROR "Invalid BoW framework: ${BOW_FRAMEWORK}")
 endif()
 
+if (TensorRT_FOUND)
+    target_include_directories(${PROJECT_NAME}
+            PUBLIC
+            ${CUDA_INCLUDE_DIRS}
+            ${TensorRT_INCLUDE_DIRS}
+            ${TensorRT_DIR}/samples/common)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC USE_TensorRT)
+endif (TensorRT_FOUND)
+
 if(USE_ARUCO)
     target_compile_definitions(${PROJECT_NAME} PUBLIC USE_ARUCO)
 endif()
@@ -207,7 +219,6 @@ target_link_libraries(${PROJECT_NAME}
                       ${SQLite3_LIBRARIES}
                       opencv_core
                       opencv_features2d
-                      opencv_xfeature2d
                       opencv_calib3d
                       "$<$<BOOL:${USE_ARUCO}>:opencv_aruco>"
                       g2o::core
@@ -226,6 +237,11 @@ target_link_libraries(${PROJECT_NAME}
                       ${LAPACK_LIBRARIES}
                       ${CUDA_LIBRARIES}
                       ${TORCH_LIBRARIES})
+if(TensorRT_FOUND)
+    target_link_libraries(${PROJECT_NAME}
+            PUBLIC
+            ${TensorRT_LIBRARIES})
+endif(TensorRT_FOUND)
 
 # ----- Install configuration -----
 
