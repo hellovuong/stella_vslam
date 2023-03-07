@@ -7,17 +7,24 @@
 
 #include "stella_vslam/feature/base_extractor.h"
 #include "stella_vslam/hloc/hloc.h"
+#include "stella_vslam/feature/orb_params.h"
+#include "stella_vslam/feature/sp_trt.h"
 
 namespace stella_vslam::feature {
 
 class sp_extractor : public base_extractor {
 public:
-    sp_extractor();
+    explicit sp_extractor(sp_params super_point_config);
     ~sp_extractor() = default;
 
     //! Extract keypoints and each descriptor of them
     void extract(const cv::_InputArray& in_image, const cv::_InputArray& in_image_mask,
                  std::vector<cv::KeyPoint>& keypts, const cv::_OutputArray& out_descriptors) override;
+
+    sp_params sp_params_;
+    spPtr sp_ptr_;
+
+    std::vector<size_t> num_feature_per_level_ = {};
 
 private:
     /**
@@ -36,7 +43,6 @@ private:
     const unsigned int num_levels_ = 4;
     size_t max_num_features_ = 1000;
     const float scale_factor_ = 1.2;
-    std::vector<size_t> num_feature_per_level_ = {};
 
     //! A list of the scale factor of each pyramid layer
     std::vector<float> scale_factors_;
@@ -52,7 +58,8 @@ public:
 
     void operator()(const cv::Range& range) const CV_OVERRIDE {
         for (int level = range.start; level != range.end; ++level) {
-            stella_vslam::SuperPoint::Extract(extractor_->image_pyramid_.at(level), *all_keypoints_, *all_descriptors_);
+            extractor_->sp_ptr_->detect_and_compute(extractor_->image_pyramid_.at(level), *all_keypoints_, *all_descriptors_,
+                                                    (int)extractor_->num_feature_per_level_.at(level));
         }
     }
 

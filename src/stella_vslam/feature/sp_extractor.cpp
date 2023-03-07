@@ -3,17 +3,18 @@
 //
 
 #include "sp_extractor.h"
-#include "orb_params.h"
 
 namespace stella_vslam::feature {
-sp_extractor::sp_extractor() {
+sp_extractor::sp_extractor(sp_params super_point_config) :
+      sp_params_(std::move(super_point_config)),
+      sp_ptr_(std::make_shared<sp_trt>(sp_params_))
+{
     image_pyramid_.resize(num_levels_);
     num_feature_per_level_.resize(num_levels_);
 
     auto distribute_factor = 1 / scale_factor_;
-
-    compute_num_features_per_level(distribute_factor, num_levels_, max_num_features_, num_feature_per_level_);
-
+    compute_num_features_per_level(distribute_factor, num_levels_,
+                                   max_num_features_, num_feature_per_level_);
     scale_factors_ = orb_params::calc_scale_factors(num_levels_, scale_factor_);
     inv_scale_factors_ = orb_params::calc_inv_scale_factors(num_levels_, scale_factor_);
     level_sigma_sq_ = orb_params::calc_level_sigma_sq(num_levels_, scale_factor_);
@@ -36,8 +37,9 @@ void sp_extractor::extract(const cv::_InputArray& in_image, const cv::_InputArra
     DetectParallel detector(all_keypoints.data(), all_descriptors.data(), this);
     cv::parallel_for_(cv::Range(0, (int)num_levels_), detector);
 
-    for (int level = 0; level < num_levels_; ++level)
+    for (int level = 0; level < (int)num_levels_; ++level)
     {
+        num_keypoints += (int)all_keypoints[level].size();
         for (auto keypoint : all_keypoints[level])
         {
             keypoint.octave = level;
@@ -51,7 +53,8 @@ void sp_extractor::extract(const cv::_InputArray& in_image, const cv::_InputArra
 void sp_extractor::compute_num_features_per_level(const float distributed_factor, size_t num_levels,
                                                   const size_t max_num_features,
                                                   std::vector<size_t>& num_feature_per_level) const {
-    auto desired_per_level = (float)max_num_features_ * (1 - distributed_factor) / (1 - (float)pow((double)distributed_factor, (double)num_levels));
+    auto desired_per_level = (float)max_num_features_ * (1 - distributed_factor) /
+                             (1 - (float)pow((double)distributed_factor, (double)num_levels));
     int sum_features = 0;
     for (size_t level = 0; level < num_levels - 1; level++) {
         num_feature_per_level[level] = cvRound(desired_per_level);
