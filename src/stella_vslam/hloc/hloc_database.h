@@ -13,8 +13,6 @@
 
 namespace stella_vslam {
 
-using namespace std;
-
 /// Id of entries of the database
 typedef int EntryId;
 
@@ -127,27 +125,6 @@ public:
     }
 };
 
-class hloc_database {
-public:
-    void add(cv::Mat& new_global_descriptor) {
-        database[database.size()] = new_global_descriptor;
-    }
-
-    void query(cv::Mat& global_descriptor, vector<Result>& ret) {
-        query(global_descriptor, ret, 0, database.size());
-    }
-
-    void query(cv::Mat& global_descriptor, vector<Result>& ret, EntryId start_id, EntryId end_id) {
-        for (int i = start_id; i < end_id; i++) {
-            ret.emplace_back(i, global_descriptor.dot(database[i]));
-        }
-        sort(ret.begin(), ret.end(), greater<>());
-    }
-
-private:
-    map<EntryId, cv::Mat> database;
-};
-
 namespace hloc {
 class keyframe {
 public:
@@ -156,15 +133,15 @@ public:
     std::shared_ptr<data::keyframe> keyfrm_{};
 
     void computeWindow();
-    void computeNew(vector<cv::Point2f>& keypoint, std::vector<float>& scores);
+    void computeNew(std::vector<cv::Point2f>& keypoint, std::vector<float>& scores);
 
-    vector<cv::Point3f> point_3d{};
-    vector<cv::Point2f> point_2d_uv_{};
-    vector<cv::Point2f> point_2d_norm{};
-    vector<double> point_id{};
-    vector<cv::KeyPoint> keypoints_{};
-    vector<cv::KeyPoint> keypoints_norm_{};
-    vector<cv::KeyPoint> window_keypoints{};
+    std::vector<cv::Point3f> point_3d{};
+    std::vector<cv::Point2f> point_2d_uv_{};
+    std::vector<cv::Point2f> point_2d_norm{};
+    std::vector<double> point_id{};
+    std::vector<cv::KeyPoint> keypoints_{};
+    std::vector<cv::KeyPoint> keypoints_norm_{};
+    std::vector<cv::KeyPoint> window_keypoints{};
     std::vector<float> scores_{};
     std::vector<float> window_scores{};
     cv::Mat local_descriptors_{};
@@ -173,5 +150,38 @@ public:
 };
 } // namespace hloc
 
+typedef std::list<std::pair<std::shared_ptr<hloc::keyframe>, double>> query_res_t;
+
+class hloc_database {
+public:
+    void add(const std::shared_ptr<hloc::keyframe>& keyfrm, cv::Mat& new_global_descriptor) {
+        database[keyfrm] = new_global_descriptor;
+    }
+
+    query_res_t query(cv::Mat& global_descriptor) {
+        query_res_t ret;
+        for (auto const& desc : database) {
+            auto key_frame = desc.first;
+            if ((not key_frame)
+                or (not key_frame->keyfrm_)
+                or (key_frame->keyfrm_->will_be_erased())) {
+                continue;
+            }
+            auto score = global_descriptor.dot(desc.second);
+            if (score < 0.7)
+                continue ;
+            ret.push_back(std::make_pair(key_frame, score));
+        }
+        ret.sort(comp_first);
+        return ret;
+    }
+
+private:
+    std::unordered_map<std::shared_ptr<hloc::keyframe>, cv::Mat> database{};
+    static bool comp_first(const std::pair<std::shared_ptr<hloc::keyframe>, double>& a,
+                           const std::pair<std::shared_ptr<hloc::keyframe>, double>& b) {
+        return a.first > b.first;
+    }
+};
 } // namespace stella_vslam
 #endif // STELLA_VSLAM_HLOC_DATABASE_H

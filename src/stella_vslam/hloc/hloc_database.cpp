@@ -17,7 +17,7 @@ void stella_vslam::hloc::keyframe::computeNew(std::vector<cv::Point2f>& keypoint
     cv::Mat local_descriptors;
     const cv::Mat img = keyfrm_->img.clone();
     const auto tp_1 = std::chrono::steady_clock::now();
-    stella_vslam::SuperPoint::Extract(img, keypoints, scores, local_descriptors);
+    //    stella_vslam::SuperPoint::Extract(img, keypoints, scores, local_descriptors);
     const auto tp_2 = std::chrono::steady_clock::now();
     local_descriptors_ = local_descriptors.clone();
 

@@ -6,7 +6,7 @@
 #include <opencv2/opencv.hpp>
 #include "loop_detector_hloc.h"
 
-#define DEBUG_IMAGE true
+#define DEBUG_IMAGE false
 
 namespace stella_vslam::module {
 void loop_detector_hloc::enable_loop_detector() {
@@ -32,20 +32,20 @@ bool loop_detector_hloc::detect_loop_candidates_impl() {
     if (DEBUG_IMAGE) {
         auto feature_num = cur_keyfrm_->keyfrm_->get_landmarks().size();
         cv::resize(cur_keyfrm_->keyfrm_->img.clone(), compressed_image, cv::Size(848, 480));
-        putText(compressed_image, "feature_num:" + to_string(feature_num), cv::Point2f(10, 10), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
+        putText(compressed_image, "feature_num:" + std::to_string(feature_num), cv::Point2f(10, 10), cv::FONT_HERSHEY_SIMPLEX, 0.4, cv::Scalar(255));
         image_pool[cur_keyfrm_->keyfrm_->id_] = compressed_image;
     }
 
     // first query; then add this frame into database!
-    vector<Result> ret;
+    query_res_t ret;
     cv::Mat global_desp = cur_keyfrm_->global_descriptors_.clone();
 
     if (last_loop_count > 10) {
-        db.query(global_desp, ret);
-        db.add(global_desp);
+        ret = db->query(global_desp);
+        db->add(cur_keyfrm_, global_desp);
     }
     else {
-        db.add(global_desp);
+        db->add(cur_keyfrm_, global_desp);
         last_loop_count++;
     }
 
@@ -53,17 +53,19 @@ bool loop_detector_hloc::detect_loop_candidates_impl() {
     cv::Mat loop_result;
     if (DEBUG_IMAGE) {
         loop_result = compressed_image.clone();
-        if (ret.size() > 0)
-            putText(loop_result, "neighbour score:" + to_string(ret[0].Score), cv::Point2f(10, 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255));
+        if (!ret.empty())
+            putText(loop_result, "neighbour score:" + std::to_string(ret.front().second),
+                    cv::Point2f(10, 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255));
     }
     // visual loop result
     if (DEBUG_IMAGE) {
-        if (ret.size() >= 1 && ret[0].Score > LOOP_THRESHOLD) {
-            int tmp_index = ret[0].Id;
-            auto it = image_pool.find(tmp_index);
+        if (!ret.empty() && ret.front().second > LOOP_THRESHOLD) {
+            size_t tmp_index = ret.front().first->keyfrm_->id_;
+            auto it = image_pool.find((int)tmp_index);
             cv::Mat tmp_image = (it->second).clone();
             if (not tmp_image.empty()) {
-                putText(tmp_image, "index:  " + to_string(tmp_index) + "loop score:" + to_string(ret[0].Score), cv::Point2f(10, 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255));
+                putText(tmp_image, "index:  " + std::to_string(tmp_index) + "loop score:" + std::to_string(ret.front().second),
+                        cv::Point2f(10, 50), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255));
                 cv::hconcat(loop_result, tmp_image, loop_result);
             }
             last_loop_count = 0;
@@ -75,6 +77,9 @@ bool loop_detector_hloc::detect_loop_candidates_impl() {
     }
 
     return false;
+}
+const std::shared_ptr<hloc_database>& loop_detector_hloc::getDb() const {
+    return db;
 }
 
 } // namespace stella_vslam::module

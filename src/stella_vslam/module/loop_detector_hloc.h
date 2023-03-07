@@ -43,6 +43,8 @@ public:
      */
     bool detect_loop_candidates();
 
+    const std::shared_ptr<hloc_database>& getDb() const;
+
 private:
     /**
      * called by detect_loop_candidates
@@ -55,11 +57,11 @@ private:
     //-----------------------------------------
     // variables for loop detection and correction
     //! current keyframe
-    std::shared_ptr<hloc::keyframe> cur_keyfrm_;
+    std::shared_ptr<hloc::keyframe> cur_keyfrm_ = {};
 
     //! hloc database
-    hloc_database db;
-
+    //    hloc_database db;
+    std::shared_ptr<hloc_database> db = std::make_shared<hloc_database>();
     //
     double LOOP_THRESHOLD = 0.35;
     double RELOC_THRESHOLD = 0.3;
@@ -72,7 +74,7 @@ private:
     //! last loop id
     int last_loop_count = 0;
     // viz
-    map<int, cv::Mat> image_pool;
+    std::map<int, cv::Mat> image_pool;
 };
 
 } // namespace stella_vslam::module
