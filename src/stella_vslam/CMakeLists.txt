@@ -14,7 +14,8 @@ find_package(SQLite3 REQUIRED)
 
 # We require CUDA, OpenCV, and TensorRT
 find_package(TensorRT REQUIRED)
-
+set(CUDA_TOOLKIT_ROOT_DIR /usr/local/cuda)
+find_package(CUDA 11.5 REQUIRED)
 # g2o
 find_package(g2o REQUIRED
              COMPONENTS
@@ -42,16 +43,16 @@ else()
 endif()
 
 # set your own libtorch path
-set(TORCH_PATH "/home/vuong/Code/libtorch/share/cmake/Torch" CACHE STRING "Torch lib path")
-if (TORCH_PATH)
-    message("TORCH_PATH set to: ${TORCH_PATH}")
-    set(Torch_DIR ${TORCH_PATH})
-else ()
-    message(FATAL_ERROR "Need to specify Torch path, e.g., pytorch/torch/share/cmake/Torch ")
-endif ()
-
-find_package(PythonInterp REQUIRED)
-find_package(Torch REQUIRED)
+#set(TORCH_PATH "/home/vuong/Code/libtorch/share/cmake/Torch" CACHE STRING "Torch lib path")
+#if (TORCH_PATH)
+#    message("TORCH_PATH set to: ${TORCH_PATH}")
+#    set(Torch_DIR ${TORCH_PATH})
+#else ()
+#    message(FATAL_ERROR "Need to specify Torch path, e.g., pytorch/torch/share/cmake/Torch ")
+#endif ()
+#
+#find_package(PythonInterp REQUIRED)
+#find_package(Torch REQUIRED)
 
 # Check first if CSparse is built from g2o
 if(TARGET g2o::csparse)
@@ -233,13 +234,12 @@ target_link_libraries(${PROJECT_NAME}
                       ${SUITESPARSE_LIBRARIES}
                       ${BoW_LIBRARY}
                       PRIVATE
-                      ${LAPACK_LIBRARIES}
-                      ${CUDA_LIBRARIES}
-                      ${TORCH_LIBRARIES})
+                      ${LAPACK_LIBRARIES})
 if(TensorRT_FOUND)
     target_link_libraries(${PROJECT_NAME}
             PUBLIC
-            ${TensorRT_LIBRARIES})
+            ${TensorRT_LIBRARIES}
+            ${CUDA_LIBRARIES})
 endif(TensorRT_FOUND)
 
 # ----- Install configuration -----

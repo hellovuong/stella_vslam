@@ -9,7 +9,8 @@
 #include <map>
 
 #include "stella_vslam/data/keyframe.h"
-#include "stella_vslam/hloc/hloc.h"
+//#include "stella_vslam/hloc/hloc.h"
+#include <spdlog/spdlog.h>
 
 namespace stella_vslam::hloc {
 class keyframe {

@@ -48,6 +48,8 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     if (feature_type == feature::feature_type_t::ORB) {
         orb_params_ = new feature::orb_params(util::yaml_optional_ref(cfg->yaml_node_, "Feature"));
         spdlog::info("load orb_params \"{}\"", orb_params_->name_);
+        orb_params_db_ = new data::orb_params_database();
+        orb_params_db_->add_orb_params(orb_params_);
     }
 
     // database
@@ -55,8 +57,7 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     cam_db_->add_camera(camera_);
     map_db_ = new data::map_database(system_params["min_num_shared_lms"].as<unsigned int>(15));
     bow_db_ = new data::bow_database(bow_vocab_);
-    orb_params_db_ = new data::orb_params_database();
-    orb_params_db_->add_orb_params(orb_params_);
+
 
     // frame and map publisher
     frame_publisher_ = std::make_shared<publish::frame_publisher>(cfg_, map_db_);
@@ -171,8 +172,8 @@ void system::startup(const bool need_initialize) {
         tracker_->tracking_state_ = tracker_state_t::Lost;
     }
 
-    mapping_thread_ = std::unique_ptr<std::thread>(new std::thread(&stella_vslam::mapping_module::run, mapper_));
-    global_optimization_thread_ = std::unique_ptr<std::thread>(new std::thread(&stella_vslam::global_optimization_module::run, global_optimizer_));
+    mapping_thread_ = std::make_unique<std::thread>(&stella_vslam::mapping_module::run, mapper_);
+    global_optimization_thread_ = std::make_unique<std::thread>(&stella_vslam::global_optimization_module::run, global_optimizer_);
 }
 
 void system::shutdown() {

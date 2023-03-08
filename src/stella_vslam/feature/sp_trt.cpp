@@ -9,13 +9,15 @@
 namespace stella_vslam::feature {
 sp_trt::sp_trt(sp_params super_point_config)
     : super_point_config_(std::move(super_point_config)), engine_(nullptr) {
-    setReportableSeverity(Logger::Severity::kINTERNAL_ERROR);
+    setReportableSeverity(Logger::Severity::kERROR);
+    build();
 }
 
 bool sp_trt::build() {
     if (deserialize_engine()) {
         return true;
     }
+    spdlog::info("Start to build SuperPoint engine. It will take a while...");
     auto builder = TensorRTUniquePtr<nvinfer1::IBuilder>(
         nvinfer1::createInferBuilder(gLogger.getTRTLogger()));
     if (!builder) {
@@ -44,11 +46,11 @@ bool sp_trt::build() {
         return false;
     }
     profile->setDimensions(super_point_config_.input_tensor_names[0].c_str(),
-                           OptProfileSelector::kMIN, Dims4(1, 1, 100, 100));
+                           OptProfileSelector::kMIN, Dims4(1, 1, 128, 128));
     profile->setDimensions(super_point_config_.input_tensor_names[0].c_str(),
-                           OptProfileSelector::kOPT, Dims4(1, 1, 500, 500));
+                           OptProfileSelector::kOPT, Dims4(1, 1, 512, 512));
     profile->setDimensions(super_point_config_.input_tensor_names[0].c_str(),
-                           OptProfileSelector::kMAX, Dims4(1, 1, 1500, 1500));
+                           OptProfileSelector::kMAX, Dims4(1, 1, 1024, 1024));
     config->addOptimizationProfile(profile);
 
     auto constructed = construct_network(builder, network, config, parser);
@@ -380,10 +382,10 @@ bool sp_trt::deserialize_engine() {
         IRuntime* runtime = createInferRuntime(gLogger);
         if (runtime == nullptr)
             return false;
-        engine_ = std::shared_ptr<nvinfer1::ICudaEngine>(
-            runtime->deserializeCudaEngine(model_stream, size));
+        engine_ = std::shared_ptr<nvinfer1::ICudaEngine>(runtime->deserializeCudaEngine(model_stream, size));
         if (engine_ == nullptr)
             return false;
+        spdlog::info("Deserialized SuperPoint engine.");
         return true;
     }
     return false;
@@ -408,9 +410,6 @@ bool sp_trt::infer(const cv::Mat& image) {
     buffer_manager_.reset();
     buffer_manager_ = std::make_unique<BufferManager>(engine_, 0, context_.get());
     ASSERT(super_point_config_.input_tensor_names.size() == 1);
-    if (!process_input(buffer_manager_, image)) {
-        return false;
-    }
     buffer_manager_->copyInputToDevice();
 
     bool status = context_->executeV2(buffer_manager_->getDeviceBindings().data());
@@ -421,7 +420,7 @@ bool sp_trt::infer(const cv::Mat& image) {
     return true;
 }
 std::vector<cv::KeyPoint> sp_trt::detect(const cv::Mat& image) {
-    std::vector<cv::KeyPoint> kps = detect(image, super_point_config_.max_keypoints) ;
+    std::vector<cv::KeyPoint> kps = detect(image, super_point_config_.max_keypoints);
     return kps;
 }
 bool sp_trt::process_input(const std::unique_ptr<BufferManager>& buffers,
@@ -508,8 +507,7 @@ std::vector<cv::KeyPoint> sp_trt::detect(const cv::Mat& image, int max) {
 
     keypoints_.clear();
     descriptors_.clear();
-    auto* output_score = static_cast<float*>(buffer_manager_->getHostBuffer(
-        super_point_config_.output_tensor_names[0]));
+    auto* output_score = static_cast<float*>(buffer_manager_->getHostBuffer(super_point_config_.output_tensor_names[0]));
 
     int semi_feature_map_h = semi_dims_.d[1];
     int semi_feature_map_w = semi_dims_.d[2];

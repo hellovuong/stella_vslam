@@ -6,7 +6,7 @@
 #define STELLA_VSLAM_SP_EXTRACTOR_H
 
 #include "stella_vslam/feature/base_extractor.h"
-#include "stella_vslam/hloc/hloc.h"
+//#include "stella_vslam/hloc/hloc.h"
 #include "stella_vslam/feature/orb_params.h"
 #include "stella_vslam/feature/sp_trt.h"
 
@@ -44,9 +44,9 @@ private:
     static void compute_image_pyramid(const cv::Mat& image, size_t num_levels, std::vector<cv::Mat>& image_pyramid,
                                       std::vector<float>& scale_factors);
 
-    const unsigned int num_levels_ = 4;
+    unsigned int num_levels_ = 4;
     size_t max_num_features_ = 1000;
-    const float scale_factor_ = 1.2;
+    float scale_factor_ = 1.2;
 
     //! A list of the scale factor of each pyramid layer
     std::vector<float> scale_factors_;
@@ -67,7 +67,7 @@ public:
         }
     }
 
-    DetectParallel& operator=(const DetectParallel&) {
+    DetectParallel& operator = (const DetectParallel&) {
         return *this;
     };
 

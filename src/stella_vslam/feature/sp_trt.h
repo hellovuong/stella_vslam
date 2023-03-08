@@ -20,6 +20,8 @@
 #include "common_trt/common.h"
 #include "common_trt/logger.h"
 
+#include <spdlog/spdlog.h>
+
 using namespace samplesCommon;
 using namespace sample;
 

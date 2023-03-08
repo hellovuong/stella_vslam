@@ -31,7 +31,7 @@ public:
                     break;
                 }
                 case feature_type_t::SuperPoint: {
-                    extractor = new sp_extractor(node["Feature"]);
+                    extractor = new sp_extractor(node);
                     break;
                 }
             }

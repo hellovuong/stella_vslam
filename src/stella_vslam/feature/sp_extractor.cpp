@@ -21,11 +21,16 @@ sp_extractor::sp_extractor(sp_params super_point_config)
     inv_level_sigma_sq_ = orb_params::calc_inv_level_sigma_sq(num_levels_, scale_factor_);
 }
 sp_extractor::sp_extractor(const YAML::Node& yaml_node) {
-    YAML::Node superpoint_node = yaml_node["superpoint"];
+    YAML::Node superpoint_node = yaml_node["Feature"];
+
     parse_configs(superpoint_node);
+
     feature_type_ = feature_type_t::SuperPoint;
+    num_levels_ = superpoint_node["num_levels"].as<unsigned int>(8);
+    scale_factor_ = superpoint_node["scale_factor"].as<float>(1.2);
 
     sp_ptr_ = std::make_shared<sp_trt>(sp_params_);
+
     image_pyramid_.resize(num_levels_);
     num_feature_per_level_.resize(num_levels_);
 
@@ -40,6 +45,7 @@ sp_extractor::sp_extractor(const YAML::Node& yaml_node) {
 void sp_extractor::parse_configs(const YAML::Node& yaml_node) {
     max_num_features_ = yaml_node["max_keypoints"].as<int>();
     sp_params_.max_keypoints = (int)max_num_features_;
+
     sp_params_.keypoint_threshold = yaml_node["keypoint_threshold"].as<double>();
     sp_params_.remove_borders = yaml_node["remove_borders"].as<int>();
     sp_params_.dla_core = yaml_node["dla_core"].as<int>();

@@ -15,7 +15,7 @@ void keyframe::computeNew() {
     // compute global descriptor
     cv::Mat global_descriptors;
     const auto tp_3 = std::chrono::steady_clock::now();
-    stella_vslam::NetVLAD::Extract(img, global_descriptors);
+//    stella_vslam::NetVLAD::Extract(img, global_descriptors);
     const auto tp_4 = std::chrono::steady_clock::now();
     global_descriptors_ = global_descriptors.clone();
 
