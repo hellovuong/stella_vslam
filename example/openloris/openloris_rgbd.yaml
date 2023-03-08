@@ -55,6 +55,7 @@ Preprocessing:
 #================#
 
 Feature:
+  type: "ORB"
   name: "default ORB feature extraction setting"
   scale_factor: 1.2
   num_levels: 8

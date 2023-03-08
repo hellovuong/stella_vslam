@@ -3,6 +3,7 @@
 
 #include "stella_vslam/type.h"
 #include "stella_vslam/data/bow_vocabulary_fwd.h"
+#include "stella_vslam/feature/base_extractor.h"
 
 #include <string>
 #include <thread>
@@ -235,11 +236,9 @@ private:
 
     // ORB extractors
     //! ORB extractor for left/monocular image
-    feature::orb_extractor* extractor_left_ = nullptr;
+    feature::base_extractor* extractor_left_ = nullptr;
     //! ORB extractor for right image
-    feature::orb_extractor* extractor_right_ = nullptr;
-    //! ORB extractor only when used in initializing
-    feature::orb_extractor* ini_extractor_left_ = nullptr;
+    feature::base_extractor* extractor_right_ = nullptr;
 
     //! marker detector
     marker_detector::base* marker_detector_ = nullptr;

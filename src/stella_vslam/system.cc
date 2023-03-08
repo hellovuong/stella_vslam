@@ -22,7 +22,9 @@
 #include "stella_vslam/util/converter.h"
 #include "stella_vslam/util/image_converter.h"
 #include "stella_vslam/util/yaml.h"
+#include "stella_vslam/feature/extractor_factory.h"
 
+#include <memory>
 #include <thread>
 
 #include <spdlog/spdlog.h>
@@ -41,8 +43,12 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     const auto system_params = util::yaml_optional_ref(cfg->yaml_node_, "System");
 
     camera_ = camera::camera_factory::create(util::yaml_optional_ref(cfg->yaml_node_, "Camera"));
-    orb_params_ = new feature::orb_params(util::yaml_optional_ref(cfg->yaml_node_, "Feature"));
-    spdlog::info("load orb_params \"{}\"", orb_params_->name_);
+    auto feature_params = util::yaml_optional_ref(cfg->yaml_node_, "Feature");
+    auto feature_type = feature::base_extractor::load_feature_type(feature_params);
+    if (feature_type == feature::feature_type_t::ORB) {
+        orb_params_ = new feature::orb_params(util::yaml_optional_ref(cfg->yaml_node_, "Feature"));
+        spdlog::info("load orb_params \"{}\"", orb_params_->name_);
+    }
 
     // database
     cam_db_ = new data::camera_database();
@@ -53,8 +59,8 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     orb_params_db_->add_orb_params(orb_params_);
 
     // frame and map publisher
-    frame_publisher_ = std::shared_ptr<publish::frame_publisher>(new publish::frame_publisher(cfg_, map_db_));
-    map_publisher_ = std::shared_ptr<publish::map_publisher>(new publish::map_publisher(cfg_, map_db_));
+    frame_publisher_ = std::make_shared<publish::frame_publisher>(cfg_, map_db_);
+    map_publisher_ = std::make_shared<publish::map_publisher>(cfg_, map_db_);
 
     // map I/O
     auto map_format = system_params["map_format"].as<std::string>("msgpack");
@@ -65,7 +71,8 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     // mapping module
     mapper_ = new mapping_module(cfg_->yaml_node_["Mapping"], map_db_, bow_db_, bow_vocab_);
     // global optimization module
-    global_optimizer_ = new global_optimization_module(map_db_, bow_db_, bow_vocab_, cfg_->yaml_node_, camera_->setup_type_ != camera::setup_type_t::Monocular);
+    global_optimizer_ = new global_optimization_module(map_db_, bow_db_, bow_vocab_, cfg_->yaml_node_,
+                                                       camera_->setup_type_ != camera::setup_type_t::Monocular);
 
     // preprocessing modules
     const auto preprocessing_params = util::yaml_optional_ref(cfg->yaml_node_, "Preprocessing");
@@ -75,12 +82,9 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
             throw std::runtime_error("depthmap_factor must be greater than 0");
         }
     }
-    auto mask_rectangles = util::get_rectangles(preprocessing_params["mask_rectangles"]);
-
-    const auto min_size = preprocessing_params["min_size"].as<unsigned int>(800);
-    extractor_left_ = new feature::orb_extractor(orb_params_, min_size, mask_rectangles);
+    extractor_left_ = feature::feature_factory::create(cfg->yaml_node_);
     if (camera_->setup_type_ == camera::setup_type_t::Stereo) {
-        extractor_right_ = new feature::orb_extractor(orb_params_, min_size, mask_rectangles);
+        extractor_right_ = feature::feature_factory::create(cfg->yaml_node_);
     }
 
     if (cfg->marker_model_) {

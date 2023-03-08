@@ -434,7 +434,10 @@ void orb_extractor::compute_orb_descriptor(const cv::KeyPoint& keypt, const cv::
 }
 orb_extractor::orb_extractor(const YAML::Node& yaml_node, const unsigned int min_size,
                              std::vector<std::vector<float>>  mask_rects) : mask_rects_(std::move(mask_rects)), min_size_(min_size) {
+    feature_type_ = feature_type_t::ORB;
     orb_params_ = new feature::orb_params(yaml_node);
+    // resize buffers according to the number of levels
+    image_pyramid_.resize(orb_params_->num_levels_);
 }
 
 } // namespace feature

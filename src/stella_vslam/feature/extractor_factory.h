@@ -16,7 +16,7 @@ namespace stella_vslam::feature {
 class feature_factory {
 public:
     static base_extractor* create(const YAML::Node& node) {
-        const auto feature_type = base_extractor::load_feature_type(node);
+        const auto feature_type = base_extractor::load_feature_type(node["Feature"]);
         base_extractor* extractor = nullptr;
         try {
             switch (feature_type) {
@@ -25,13 +25,13 @@ public:
                     auto mask_rectangles = util::get_rectangles(preprocessing_params["mask_rectangles"]);
                     const auto min_size = preprocessing_params["min_size"].as<unsigned int>(800);
                     if (mask_rectangles.empty())
-                        extractor = new orb_extractor(node, min_size);
+                        extractor = new orb_extractor(node["Feature"], min_size);
                     else
-                        extractor = new orb_extractor(node, min_size, mask_rectangles);
+                        extractor = new orb_extractor(node["Feature"], min_size, mask_rectangles);
                     break;
                 }
                 case feature_type_t::SuperPoint: {
-                    extractor = new sp_extractor(node);
+                    extractor = new sp_extractor(node["Feature"]);
                     break;
                 }
             }
