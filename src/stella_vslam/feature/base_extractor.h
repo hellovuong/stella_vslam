@@ -17,13 +17,10 @@ enum class feature_types {
 };
 typedef stella_vslam::feature::feature_types feature_type_t;
 
-std::unordered_map<feature_type_t, std::string> feature_type_srt = {{feature_types::ORB, "ORB"},
-                                                                    {feature_types::SuperPoint, "SuperPoint"}};
-
 class base_extractor {
 public:
     base_extractor() = default;
-    virtual ~base_extractor();
+    virtual ~base_extractor() = default;
     //! Extract keypoints and each descriptor of them
     /**
      *
@@ -37,7 +34,7 @@ public:
         = 0;
 
     //! Get model type as string
-    [[nodiscard]] std::string get_feature_type_string() const { return feature_type_srt.at(feature_type_); }
+    [[nodiscard]] std::string get_feature_type_string() const { return {}; }
     //! Load model type from YAML
     static feature_type_t load_feature_type(const YAML::Node& yaml_node);
 
