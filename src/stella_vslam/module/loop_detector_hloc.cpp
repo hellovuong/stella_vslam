@@ -37,7 +37,7 @@ bool loop_detector_hloc::detect_loop_candidates_impl() {
     }
 
     // first query; then add this frame into database!
-    query_res_t ret;
+    hloc::query_res_t ret;
     cv::Mat global_desp = cur_keyfrm_->global_descriptors_.clone();
 
     if (last_loop_count > 10) {
@@ -78,7 +78,7 @@ bool loop_detector_hloc::detect_loop_candidates_impl() {
 
     return false;
 }
-const std::shared_ptr<hloc_database>& loop_detector_hloc::getDb() const {
+const std::shared_ptr<hloc::hloc_database>& loop_detector_hloc::getDb() const {
     return db;
 }
 

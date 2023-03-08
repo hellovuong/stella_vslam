@@ -43,7 +43,7 @@ public:
      */
     bool detect_loop_candidates();
 
-    const std::shared_ptr<hloc_database>& getDb() const;
+    const std::shared_ptr<hloc::hloc_database>& getDb() const;
 
 private:
     /**
@@ -61,7 +61,7 @@ private:
 
     //! hloc database
     //    hloc_database db;
-    std::shared_ptr<hloc_database> db = std::make_shared<hloc_database>();
+    std::shared_ptr<hloc::hloc_database> db = std::make_shared<hloc::hloc_database>();
     //
     double LOOP_THRESHOLD = 0.35;
     double RELOC_THRESHOLD = 0.3;

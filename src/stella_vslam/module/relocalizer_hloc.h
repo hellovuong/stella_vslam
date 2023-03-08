@@ -20,10 +20,10 @@ namespace module {
 class relocalizer_hloc {
 public:
     relocalizer_hloc(const std::shared_ptr<stella_vslam::optimize::pose_optimizer>& pose_optimizer,
-                     const std::shared_ptr<stella_vslam::hloc_database>& hloc_database);
+                     const std::shared_ptr<stella_vslam::hloc::hloc_database>& hloc_database);
 
     //! Relocalize the specified frame
-    bool relocalize(const std::shared_ptr<stella_vslam::hloc_database>& hloc_database, data::frame& curr_frm, const cv::Mat& rgb);
+    bool relocalize(const std::shared_ptr<stella_vslam::hloc::hloc_database>& hloc_database, data::frame& curr_frm, const cv::Mat& rgb);
 
     bool reloc_by_candidate(data::frame& curr_frm,
                             std::vector<cv::Point2f>& curr_frm_keypoints,
@@ -58,7 +58,7 @@ private:
     std::shared_ptr<optimize::pose_optimizer> pose_optimizer_ = nullptr;
 
     //! hloc database generate from hloc
-    std::shared_ptr<hloc_database> hlocDatabase_ = nullptr;
+    std::shared_ptr<hloc::hloc_database> hlocDatabase_ = nullptr;
 
     //! current frame image
     cv::Mat curr_img_;

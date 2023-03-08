@@ -7,7 +7,7 @@
 namespace stella_vslam::module {
 
 relocalizer_hloc::relocalizer_hloc(const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer,
-                                   const std::shared_ptr<hloc_database>& hloc_database)
+                                   const std::shared_ptr<hloc::hloc_database>& hloc_database)
     : pose_optimizer_(pose_optimizer), hlocDatabase_(hloc_database) {
 
 }

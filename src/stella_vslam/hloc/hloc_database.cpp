@@ -5,11 +5,12 @@
 #include "hloc_database.h"
 
 #include <utility>
-stella_vslam::hloc::keyframe::keyframe(std::shared_ptr<data::keyframe> keyfrm)
+namespace stella_vslam::hloc {
+keyframe::keyframe(std::shared_ptr<data::keyframe> keyfrm)
     : keyfrm_(std::move(keyfrm)) {
-    computeNew(point_2d_uv_, scores_);
+    computeNew();
 }
-void stella_vslam::hloc::keyframe::computeNew(std::vector<cv::Point2f>& keypoints, std::vector<float>& scores) {
+void keyframe::computeNew() {
     const cv::Mat img = keyfrm_->img.clone();
     // compute global descriptor
     cv::Mat global_descriptors;
@@ -21,3 +22,4 @@ void stella_vslam::hloc::keyframe::computeNew(std::vector<cv::Point2f>& keypoint
     const auto nv_time = std::chrono::duration_cast<std::chrono::duration<double>>(tp_4 - tp_3).count();
     spdlog::debug("NetVlad: {}", nv_time);
 }
+} // namespace stella_vslam::hloc
