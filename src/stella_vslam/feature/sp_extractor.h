@@ -15,11 +15,15 @@ namespace stella_vslam::feature {
 class sp_extractor : public base_extractor {
 public:
     explicit sp_extractor(sp_params super_point_config);
-    ~sp_extractor() = default;
+    explicit sp_extractor(const YAML::Node& yaml_node);
+
+    ~sp_extractor() override = default;
 
     //! Extract keypoints and each descriptor of them
     void extract(const cv::_InputArray& in_image, const cv::_InputArray& in_image_mask,
                  std::vector<cv::KeyPoint>& keypts, const cv::_OutputArray& out_descriptors) override;
+
+    void parse_configs(const YAML::Node& yaml_node);
 
     sp_params sp_params_;
     spPtr sp_ptr_;

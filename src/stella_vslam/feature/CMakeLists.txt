@@ -5,6 +5,7 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_extractor.h
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_extractor_node.h
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_impl.h
+               ${CMAKE_CURRENT_SOURCE_DIR}/extractor_factory.h
                ${CMAKE_CURRENT_SOURCE_DIR}/sp_extractor.h
                ${CMAKE_CURRENT_SOURCE_DIR}/base_extractor.h
                ${CMAKE_CURRENT_SOURCE_DIR}/sp_trt.h
@@ -12,6 +13,7 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_extractor.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_extractor_node.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_impl.cc
+               ${CMAKE_CURRENT_SOURCE_DIR}/base_extractor.cpp
                ${CMAKE_CURRENT_SOURCE_DIR}/sp_extractor.cpp
                ${CMAKE_CURRENT_SOURCE_DIR}/sp_trt.cpp)
 

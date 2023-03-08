@@ -15,6 +15,8 @@ public:
     orb_extractor() = delete;
 
     //! Constructor
+    orb_extractor(const YAML::Node& yaml_node, const unsigned int max_num_keypts,
+                  std::vector<std::vector<float>>  mask_rects = {});
     orb_extractor(const orb_params* orb_params,
                   const unsigned int max_num_keypts,
                   const std::vector<std::vector<float>>& mask_rects = {});
