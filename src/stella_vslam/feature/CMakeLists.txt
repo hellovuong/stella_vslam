@@ -15,6 +15,8 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/sp_extractor.cpp
                ${CMAKE_CURRENT_SOURCE_DIR}/sp_trt.cpp)
 
+add_subdirectory(common_trt)
+
 # Install headers
 file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
 install(FILES ${HEADERS}

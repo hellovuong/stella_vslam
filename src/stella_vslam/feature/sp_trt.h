@@ -16,9 +16,9 @@
 #include <NvInferRuntimeCommon.h>
 #include <NvOnnxParser.h>
 
-#include "buffers.h"
-#include "common.h"
-#include "logger.h"
+#include "common_trt/buffers.h"
+#include "common_trt/common.h"
+#include "common_trt/logger.h"
 
 using namespace samplesCommon;
 using namespace sample;

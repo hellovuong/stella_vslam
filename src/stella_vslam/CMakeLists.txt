@@ -166,8 +166,7 @@ if (TensorRT_FOUND)
     target_include_directories(${PROJECT_NAME}
             PUBLIC
             ${CUDA_INCLUDE_DIRS}
-            ${TensorRT_INCLUDE_DIRS}
-            ${TensorRT_DIR}/samples/common)
+            ${TensorRT_INCLUDE_DIRS})
     target_compile_definitions(${PROJECT_NAME} PUBLIC USE_TensorRT)
 endif (TensorRT_FOUND)
 
