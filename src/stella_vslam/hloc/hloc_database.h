@@ -131,21 +131,7 @@ public:
     explicit keyframe(std::shared_ptr<data::keyframe> cur_keyfrm);
     //! current keyframe
     std::shared_ptr<data::keyframe> keyfrm_{};
-
-    void computeWindow();
     void computeNew(std::vector<cv::Point2f>& keypoint, std::vector<float>& scores);
-
-    std::vector<cv::Point3f> point_3d{};
-    std::vector<cv::Point2f> point_2d_uv_{};
-    std::vector<cv::Point2f> point_2d_norm{};
-    std::vector<double> point_id{};
-    std::vector<cv::KeyPoint> keypoints_{};
-    std::vector<cv::KeyPoint> keypoints_norm_{};
-    std::vector<cv::KeyPoint> window_keypoints{};
-    std::vector<float> scores_{};
-    std::vector<float> window_scores{};
-    cv::Mat local_descriptors_{};
-    cv::Mat window_local_descriptors{};
     cv::Mat global_descriptors_{};
 };
 } // namespace hloc

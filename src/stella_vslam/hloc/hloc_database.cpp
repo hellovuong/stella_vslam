@@ -7,10 +7,7 @@
 #include <utility>
 stella_vslam::hloc::keyframe::keyframe(std::shared_ptr<data::keyframe> keyfrm)
     : keyfrm_(std::move(keyfrm)) {
-    computeWindow();
     computeNew(point_2d_uv_, scores_);
-}
-void stella_vslam::hloc::keyframe::computeWindow() {
 }
 void stella_vslam::hloc::keyframe::computeNew(std::vector<cv::Point2f>& keypoints, std::vector<float>& scores) {
     const cv::Mat img = keyfrm_->img.clone();
