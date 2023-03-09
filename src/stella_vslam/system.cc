@@ -45,8 +45,8 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     camera_ = camera::camera_factory::create(util::yaml_optional_ref(cfg->yaml_node_, "Camera"));
     auto feature_params = util::yaml_optional_ref(cfg->yaml_node_, "Feature");
     auto feature_type = feature::base_extractor::load_feature_type(feature_params);
+    orb_params_ = new feature::orb_params(util::yaml_optional_ref(cfg->yaml_node_, "Feature"));
     if (feature_type == feature::feature_type_t::ORB) {
-        orb_params_ = new feature::orb_params(util::yaml_optional_ref(cfg->yaml_node_, "Feature"));
         spdlog::info("load orb_params \"{}\"", orb_params_->name_);
         orb_params_db_ = new data::orb_params_database();
         orb_params_db_->add_orb_params(orb_params_);

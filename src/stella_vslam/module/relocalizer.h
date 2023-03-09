@@ -4,6 +4,7 @@
 #include "stella_vslam/match/bow_tree.h"
 #include "stella_vslam/match/projection.h"
 #include "stella_vslam/match/robust.h"
+#include "stella_vslam/match/bruce_force.h"
 #include "stella_vslam/optimize/pose_optimizer.h"
 #include "stella_vslam/solve/pnp_solver.h"
 

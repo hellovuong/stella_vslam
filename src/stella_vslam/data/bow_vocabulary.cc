@@ -19,7 +19,7 @@ void compute_bow(bow_vocabulary* bow_vocab, const cv::Mat& descriptors, bow_vect
 #ifdef USE_DBOW2
     bow_vocab->transform(util::converter::to_desc_vec(descriptors), bow_vec, bow_feat_vec, 4);
 #else
-    bow_vocab->transform(descriptors, 4, bow_vec, bow_feat_vec);
+//    bow_vocab->transform(descriptors, 4, bow_vec, bow_feat_vec);
 #endif
 }
 

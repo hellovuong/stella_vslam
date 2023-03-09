@@ -8,7 +8,7 @@ namespace match {
 unsigned int area::match_in_consistent_area(data::frame& frm_1, data::frame& frm_2, std::vector<cv::Point2f>& prev_matched_pts,
                                             std::vector<int>& matched_indices_2_in_frm_1, int margin) {
     unsigned int num_matches = 0;
-
+    assert(frm_1.frm_obs_.descriptors_.type() != CV_8U);
     matched_indices_2_in_frm_1 = std::vector<int>(frm_1.frm_obs_.undist_keypts_.size(), -1);
 
     std::vector<unsigned int> matched_dists_in_frm_2(frm_2.frm_obs_.undist_keypts_.size(), MAX_HAMMING_DIST);

@@ -53,7 +53,8 @@ public:
     bool infer(const cv::Mat& image);
 
     void visualization(const std::string& image_name, const cv::Mat& image);
-
+    void visualization(const std::vector<cv::KeyPoint>& kps,
+                       const std::string& image_name, const cv::Mat& image);
     void save_engine();
 
     bool deserialize_engine();

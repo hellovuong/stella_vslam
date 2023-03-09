@@ -7,6 +7,7 @@
 #include "stella_vslam/match/robust.h"
 #include "stella_vslam/module/frame_tracker.h"
 #include "stella_vslam/optimize/pose_optimizer_g2o.h"
+#include "stella_vslam/match/bruce_force.h"
 
 #include <spdlog/spdlog.h>
 
@@ -61,12 +62,19 @@ bool frame_tracker::motion_based_track(data::frame& curr_frm, const data::frame&
 
 bool frame_tracker::bow_match_based_track(data::frame& curr_frm, const data::frame& last_frm, const std::shared_ptr<data::keyframe>& ref_keyfrm) const {
     match::bow_tree bow_matcher(0.7, true);
-
     // Search 2D-2D matches between the ref keyframes and the current frame
     // to acquire 2D-3D matches between the frame keypoints and 3D points observed in the ref keyframe
     std::vector<std::shared_ptr<data::landmark>> matched_lms_in_curr;
-    auto num_matches = bow_matcher.match_frame_and_keyframe(ref_keyfrm, curr_frm, matched_lms_in_curr);
-
+    size_t num_matches = 0;
+    if (curr_frm.frm_obs_.descriptors_.type() == CV_32F) {
+        num_matches = match::bruce_force::match(ref_keyfrm, curr_frm, matched_lms_in_curr);
+    }
+    else if (curr_frm.frm_obs_.descriptors_.type() == CV_32F) {
+        num_matches = bow_matcher.match_frame_and_keyframe(ref_keyfrm, curr_frm, matched_lms_in_curr);
+    }
+    else {
+        spdlog::error("Unsupported descriptor type!");
+    }
     if (num_matches < num_matches_thr_) {
         spdlog::debug("bow match based tracking failed: {} matches < {}", num_matches, num_matches_thr_);
         return false;

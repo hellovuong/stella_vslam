@@ -12,7 +12,10 @@ namespace match {
 
 static constexpr unsigned int HAMMING_DIST_THR_LOW = 50;
 static constexpr unsigned int HAMMING_DIST_THR_HIGH = 100;
+static constexpr float HAMMING_L2_DIST_THR_LOW = 0.75;
+static constexpr float HAMMING_L2_DIST_THR_HIGH = 0.6;
 static constexpr unsigned int MAX_HAMMING_DIST = 256;
+static constexpr float MAX_HAMMING_L2_DIST = 1.0f;
 
 //! ORB特徴量間のハミング距離を計算する
 inline unsigned int compute_descriptor_distance_32(const cv::Mat& desc_1, const cv::Mat& desc_2) {
@@ -61,7 +64,15 @@ inline unsigned int compute_descriptor_distance_64(const cv::Mat& desc_1, const 
 
     return dist;
 }
-
+// Eigen is much faster than OpenCV
+float DescriptorDistance_L2(const cv::Mat &a, const cv::Mat &b)
+{
+    assert(a.cols == b.cols);
+    assert(a.isContinuous() && b.isContinuous());
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> const> des1(a.ptr<float>(), a.rows, a.cols);
+    Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> const> des2(b.ptr<float>(), b.rows, b.cols);
+    return (des1 - des2).norm();
+}
 class base {
 public:
     base(const float lowe_ratio, const bool check_orientation)

@@ -163,7 +163,8 @@ unsigned int projection::match_current_and_last_frames(data::frame& curr_frm, co
 
         const auto lm_desc = lm->get_descriptor();
 
-        unsigned int best_hamm_dist = MAX_HAMMING_DIST;
+        auto best_hamm_dist_bin = MAX_HAMMING_DIST;
+        auto best_hamm_dist_float= MAX_HAMMING_L2_DIST;
         int best_idx = -1;
 
         for (const auto curr_idx : indices) {
@@ -184,19 +185,35 @@ unsigned int projection::match_current_and_last_frames(data::frame& curr_frm, co
             }
 
             const auto& desc = curr_frm.frm_obs_.descriptors_.row(curr_idx);
+            size_t hamm_dist_bin;
+            float hamm_dist_float;
+            if (lm_desc.type() == CV_8U) {
+                hamm_dist_bin = compute_descriptor_distance_32(lm_desc, desc);
+                if (hamm_dist_bin < best_hamm_dist_bin) {
+                    best_hamm_dist_bin = hamm_dist_bin;
+                    best_idx = curr_idx;
+                }
+            }
+            else {
+                hamm_dist_float = DescriptorDistance_L2(lm_desc, desc);
+                if (hamm_dist_float < best_hamm_dist_float) {
+                    best_hamm_dist_float = hamm_dist_float;
+                    best_idx = curr_idx;
+                }
+            }
 
-            const auto hamm_dist = compute_descriptor_distance_32(lm_desc, desc);
 
-            if (hamm_dist < best_hamm_dist) {
-                best_hamm_dist = hamm_dist;
-                best_idx = curr_idx;
+        }
+        if (lm_desc.type() == CV_8U) {
+            if (HAMMING_DIST_THR_HIGH < best_hamm_dist_bin) {
+                continue;
             }
         }
-
-        if (HAMMING_DIST_THR_HIGH < best_hamm_dist) {
-            continue;
+        else {
+            if (HAMMING_L2_DIST_THR_HIGH < best_hamm_dist_float) {
+                continue;
+            }
         }
-
         // The matching is valid
         curr_frm.add_landmark(lm, best_idx);
         ++num_matches;

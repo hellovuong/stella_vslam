@@ -7,12 +7,14 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/projection.h
                ${CMAKE_CURRENT_SOURCE_DIR}/robust.h
                ${CMAKE_CURRENT_SOURCE_DIR}/stereo.h
+               ${CMAKE_CURRENT_SOURCE_DIR}/bruce_force.h
                ${CMAKE_CURRENT_SOURCE_DIR}/area.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/bow_tree.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/fuse.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/projection.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/robust.cc
-               ${CMAKE_CURRENT_SOURCE_DIR}/stereo.cc)
+               ${CMAKE_CURRENT_SOURCE_DIR}/stereo.cc
+               ${CMAKE_CURRENT_SOURCE_DIR}/bruce_force.cpp)
 
 # Install headers
 file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")
