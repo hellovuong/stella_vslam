@@ -401,15 +401,14 @@ bool sp_trt::infer(const cv::Mat& image) {
 
     assert(engine_->getNbBindings() == 3);
 
-    const int input_index = engine_->getBindingIndex(
-        super_point_config_.input_tensor_names[0].c_str());
+    const int input_index = engine_->getBindingIndex(super_point_config_.input_tensor_names[0].c_str());
 
-    context_->setBindingDimensions(input_index,
-                                   Dims4(1, 1, image.rows, image.cols));
+    context_->setBindingDimensions(input_index, Dims4(1, 1, image.rows, image.cols));
 
     buffer_manager_.reset();
     buffer_manager_ = std::make_unique<BufferManager>(engine_, 0, context_.get());
     ASSERT(super_point_config_.input_tensor_names.size() == 1);
+    process_input(buffer_manager_, image);
     buffer_manager_->copyInputToDevice();
 
     bool status = context_->executeV2(buffer_manager_->getDeviceBindings().data());
