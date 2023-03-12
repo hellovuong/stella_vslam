@@ -195,7 +195,7 @@ unsigned int projection::match_current_and_last_frames(data::frame& curr_frm, co
                 }
             }
             else {
-                hamm_dist_float = DescriptorDistance_L2(lm_desc, desc);
+                hamm_dist_float = compute_descriptor_distance_l2(lm_desc, desc);
                 if (hamm_dist_float < best_hamm_dist_float) {
                     best_hamm_dist_float = hamm_dist_float;
                     best_idx = curr_idx;

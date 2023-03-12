@@ -17,6 +17,12 @@ static constexpr float HAMMING_L2_DIST_THR_HIGH = 0.6;
 static constexpr unsigned int MAX_HAMMING_DIST = 256;
 static constexpr float MAX_HAMMING_L2_DIST = 1.0f;
 
+enum class descriptor_type {
+    BIN,
+    FLOAT
+};
+typedef stella_vslam::match::descriptor_type descriptor_type_t;
+
 //! ORB特徴量間のハミング距離を計算する
 inline unsigned int compute_descriptor_distance_32(const cv::Mat& desc_1, const cv::Mat& desc_2) {
     // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
@@ -64,9 +70,8 @@ inline unsigned int compute_descriptor_distance_64(const cv::Mat& desc_1, const 
 
     return dist;
 }
-// Eigen is much faster than OpenCV
-float DescriptorDistance_L2(const cv::Mat &a, const cv::Mat &b)
-{
+float compute_descriptor_distance_l2(const cv::Mat& a, const cv::Mat& b) {
+    // Eigen is much faster than OpenCV
     assert(a.cols == b.cols);
     assert(a.isContinuous() && b.isContinuous());
     Eigen::Map<Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> const> des1(a.ptr<float>(), a.rows, a.cols);
@@ -79,6 +84,8 @@ public:
         : lowe_ratio_(lowe_ratio), check_orientation_(check_orientation) {}
 
     virtual ~base() = default;
+
+    descriptor_type_t descriptor_type_ = descriptor_type_t::BIN;
 
 protected:
     const float lowe_ratio_;
