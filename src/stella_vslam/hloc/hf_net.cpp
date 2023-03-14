@@ -4,7 +4,6 @@
 
 #include "hf_net.h"
 
-namespace stella_vslam {
-namespace hloc {
-} // namespace hloc
+namespace stella_vslam::hloc {
+
 } // namespace stella_vslam

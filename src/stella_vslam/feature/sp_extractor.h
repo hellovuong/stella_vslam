@@ -6,7 +6,6 @@
 #define STELLA_VSLAM_SP_EXTRACTOR_H
 
 #include "stella_vslam/feature/base_extractor.h"
-//#include "stella_vslam/hloc/hloc.h"
 #include "stella_vslam/feature/orb_params.h"
 #include "stella_vslam/feature/sp_trt.h"
 
