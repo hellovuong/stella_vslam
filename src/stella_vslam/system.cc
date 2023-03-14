@@ -58,7 +58,6 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     map_db_ = new data::map_database(system_params["min_num_shared_lms"].as<unsigned int>(15));
     bow_db_ = new data::bow_database(bow_vocab_);
 
-
     // frame and map publisher
     frame_publisher_ = std::make_shared<publish::frame_publisher>(cfg_, map_db_);
     map_publisher_ = std::make_shared<publish::map_publisher>(cfg_, map_db_);
@@ -386,7 +385,8 @@ data::frame system::create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& dep
     cv::Mat img_depth = depthmap;
     util::convert_to_grayscale(img_gray, camera_->color_order_);
     util::convert_to_true_depth(img_depth, depthmap_factor_);
-
+    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
+    clahe->apply(img_gray, img_gray);
     data::frame_observation frm_obs;
 
     // Extract ORB feature
@@ -396,7 +396,7 @@ data::frame system::create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& dep
     if (keypts_.empty()) {
         spdlog::warn("preprocess: cannot extract any keypoints");
     }
-
+    assert(!keypts_.empty());
     // Undistort keypoints
     camera_->undistort_keypoints(keypts_, frm_obs.undist_keypts_);
 
@@ -414,7 +414,7 @@ data::frame system::create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& dep
 
         const float depth = img_depth.at<float>(y, x);
 
-        if (depth <= 0) {
+        if (depth <= 0 or depth > 10.0f) {
             continue;
         }
 

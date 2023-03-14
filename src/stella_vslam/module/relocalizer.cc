@@ -42,6 +42,7 @@ bool relocalizer::relocalize(data::bow_database* bow_db, data::frame& curr_frm) 
     // Acquire relocalization candidates
     const auto reloc_candidates = bow_db->acquire_keyframes(curr_frm.bow_vec_);
     if (reloc_candidates.empty()) {
+        spdlog::debug("relocalizer::relocalize: Empty reloc candidates");
         return false;
     }
 

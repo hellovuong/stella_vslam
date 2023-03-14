@@ -7,8 +7,7 @@
 #include "stella_vslam/match/projection.h"
 #include "stella_vslam/util/angle.h"
 
-namespace stella_vslam {
-namespace match {
+namespace stella_vslam::match {
 
 unsigned int projection::match_frame_and_landmarks(data::frame& frm,
                                                    const std::vector<std::shared_ptr<data::landmark>>& local_landmarks,
@@ -38,11 +37,21 @@ unsigned int projection::match_frame_and_landmarks(data::frame& frm,
             continue;
         }
 
+        float best_hamm_dist = {};
+        float second_best_hamm_dist = {};
         const cv::Mat lm_desc = local_lm->get_descriptor();
-
-        unsigned int best_hamm_dist = MAX_HAMMING_DIST;
+        if (lm_desc.type() == CV_8U) {
+            best_hamm_dist = MAX_HAMMING_DIST;
+            second_best_hamm_dist = MAX_HAMMING_DIST;
+        }
+        else if (lm_desc.type() == CV_32F) {
+            best_hamm_dist = MAX_HAMMING_L2_DIST;
+            second_best_hamm_dist = MAX_HAMMING_L2_DIST;
+        }
+        else {
+            assert("wrong desc type");
+        }
         int best_scale_level = -1;
-        unsigned int second_best_hamm_dist = MAX_HAMMING_DIST;
         int second_best_scale_level = -1;
         int best_idx = -1;
 
@@ -52,7 +61,7 @@ unsigned int projection::match_frame_and_landmarks(data::frame& frm,
                 continue;
             }
 
-            if (!frm.frm_obs_.stereo_x_right_.empty() && 0 < frm.frm_obs_.stereo_x_right_.at(idx)) {
+            if (lm_desc.type() == CV_8U && !frm.frm_obs_.stereo_x_right_.empty() && 0 < frm.frm_obs_.stereo_x_right_.at(idx)) {
                 const auto reproj_error = std::abs(lm_to_x_right.at(local_lm->id_) - frm.frm_obs_.stereo_x_right_.at(idx));
                 if (margin * frm.orb_params_->scale_factors_.at(pred_scale_level) < reproj_error) {
                     continue;
@@ -60,8 +69,16 @@ unsigned int projection::match_frame_and_landmarks(data::frame& frm,
             }
 
             const cv::Mat& desc = frm.frm_obs_.descriptors_.row(idx);
-
-            const auto dist = compute_descriptor_distance_32(lm_desc, desc);
+            float dist = {};
+            if (lm_desc.type() == CV_8U) {
+                dist = static_cast<float>(compute_descriptor_distance_32(lm_desc, desc));
+            }
+            else if (lm_desc.type() == CV_32F) {
+                dist = compute_descriptor_distance_l2(lm_desc, desc);
+            }
+            else {
+                assert("wrong desc type");
+            }
 
             if (dist < best_hamm_dist) {
                 second_best_hamm_dist = best_hamm_dist;
@@ -76,9 +93,10 @@ unsigned int projection::match_frame_and_landmarks(data::frame& frm,
             }
         }
 
-        if (best_hamm_dist <= HAMMING_DIST_THR_HIGH) {
+        if ((lm_desc.type() == CV_8U && best_hamm_dist <= HAMMING_DIST_THR_HIGH) or
+            (lm_desc.type() == CV_32F && best_hamm_dist <= HAMMING_L2_DIST_THR_HIGH)) {
             // Lowe's ratio test
-            if (best_scale_level == second_best_scale_level && best_hamm_dist > lowe_ratio_ * second_best_hamm_dist) {
+            if (lm_desc.type() == CV_8U && best_scale_level == second_best_scale_level && best_hamm_dist > lowe_ratio_ * second_best_hamm_dist) {
                 continue;
             }
 
@@ -163,8 +181,16 @@ unsigned int projection::match_current_and_last_frames(data::frame& curr_frm, co
 
         const auto lm_desc = lm->get_descriptor();
 
-        auto best_hamm_dist_bin = MAX_HAMMING_DIST;
-        auto best_hamm_dist_float= MAX_HAMMING_L2_DIST;
+        float best_hamm_dist = MAX_HAMMING_DIST;
+        if (lm_desc.type() == CV_8U) {
+            best_hamm_dist = MAX_HAMMING_DIST;
+        }
+        else if (lm_desc.type() == CV_32F) {
+            best_hamm_dist = MAX_HAMMING_L2_DIST;
+        }
+        else {
+            assert("Wrong desc type!");
+        }
         int best_idx = -1;
 
         for (const auto curr_idx : indices) {
@@ -185,34 +211,24 @@ unsigned int projection::match_current_and_last_frames(data::frame& curr_frm, co
             }
 
             const auto& desc = curr_frm.frm_obs_.descriptors_.row(curr_idx);
-            size_t hamm_dist_bin;
-            float hamm_dist_float;
+            float hamm_dist = {};
             if (lm_desc.type() == CV_8U) {
-                hamm_dist_bin = compute_descriptor_distance_32(lm_desc, desc);
-                if (hamm_dist_bin < best_hamm_dist_bin) {
-                    best_hamm_dist_bin = hamm_dist_bin;
-                    best_idx = curr_idx;
-                }
+                hamm_dist = static_cast<float>(compute_descriptor_distance_32(lm_desc, desc));
+            }
+            else if (lm_desc.type() == CV_32F) {
+                hamm_dist = compute_descriptor_distance_l2(lm_desc, desc);
             }
             else {
-                hamm_dist_float = compute_descriptor_distance_l2(lm_desc, desc);
-                if (hamm_dist_float < best_hamm_dist_float) {
-                    best_hamm_dist_float = hamm_dist_float;
-                    best_idx = curr_idx;
-                }
+                assert("Wrong desc type!");
             }
-
-
-        }
-        if (lm_desc.type() == CV_8U) {
-            if (HAMMING_DIST_THR_HIGH < best_hamm_dist_bin) {
-                continue;
+            if (hamm_dist < best_hamm_dist) {
+                best_hamm_dist = hamm_dist;
+                best_idx = curr_idx;
             }
         }
-        else {
-            if (HAMMING_L2_DIST_THR_HIGH < best_hamm_dist_float) {
-                continue;
-            }
+        if ((lm_desc.type() == CV_8U && HAMMING_DIST_THR_HIGH < best_hamm_dist) or
+            (lm_desc.type() == CV_32F && HAMMING_L2_DIST_THR_HIGH < best_hamm_dist)) {
+            continue;
         }
         // The matching is valid
         curr_frm.add_landmark(lm, best_idx);
@@ -299,7 +315,16 @@ unsigned int projection::match_frame_and_keyframe(const Mat44_t& cam_pose_cw,
 
         const auto lm_desc = lm->get_descriptor();
 
-        unsigned int best_hamm_dist = MAX_HAMMING_DIST;
+        float best_hamm_dist = {};
+        if (lm_desc.type() == CV_8U) {
+            best_hamm_dist = MAX_HAMMING_DIST;
+        }
+        else if (lm_desc.type() == CV_32F) {
+            best_hamm_dist = MAX_HAMMING_L2_DIST;
+        }
+        else {
+            assert("Wrong desc type!");
+        }
         int best_idx = -1;
 
         for (unsigned long curr_idx : indices) {
@@ -312,16 +337,23 @@ unsigned int projection::match_frame_and_keyframe(const Mat44_t& cam_pose_cw,
             }
 
             const auto& desc = frm_obs.descriptors_.row(curr_idx);
-
-            const auto hamm_dist = compute_descriptor_distance_32(lm_desc, desc);
-
+            float hamm_dist = {};
+            if (lm_desc.type() == CV_8U) {
+                hamm_dist = static_cast<float>(compute_descriptor_distance_32(lm_desc, desc));
+            }
+            else if (lm_desc.type() == CV_32F) {
+                hamm_dist = compute_descriptor_distance_l2(lm_desc, desc);
+            }
+            else {
+                assert("Wrong desc type!");
+            }
             if (hamm_dist < best_hamm_dist) {
                 best_hamm_dist = hamm_dist;
                 best_idx = curr_idx;
             }
         }
 
-        if (hamm_dist_thr < best_hamm_dist) {
+        if (static_cast<float>(hamm_dist_thr) < best_hamm_dist) {
             continue;
         }
 
@@ -399,7 +431,16 @@ unsigned int projection::match_by_Sim3_transform(const std::shared_ptr<data::key
         // Find keypoints with the closest descriptor
         const auto lm_desc = lm->get_descriptor();
 
-        unsigned int best_dist = MAX_HAMMING_DIST;
+        float best_dist = {};
+        if (lm_desc.type() == CV_8U) {
+            best_dist = MAX_HAMMING_DIST;
+        }
+        else if (lm_desc.type() == CV_32F) {
+            best_dist = MAX_HAMMING_L2_DIST;
+        }
+        else {
+            assert("Wrong desc type!");
+        }
         int best_idx = -1;
 
         for (const auto idx : indices) {
@@ -416,7 +457,16 @@ unsigned int projection::match_by_Sim3_transform(const std::shared_ptr<data::key
 
             const auto& desc = keyfrm->frm_obs_.descriptors_.row(idx);
 
-            const auto hamm_dist = compute_descriptor_distance_32(lm_desc, desc);
+            float hamm_dist = {};
+            if (lm_desc.type() == CV_8U) {
+                hamm_dist = static_cast<float>(compute_descriptor_distance_32(lm_desc, desc));
+            }
+            else if (lm_desc.type() == CV_32F) {
+                hamm_dist = compute_descriptor_distance_l2(lm_desc, desc);
+            }
+            else {
+                assert("Wrong desc type!");
+            }
 
             if (hamm_dist < best_dist) {
                 best_dist = hamm_dist;
@@ -424,7 +474,8 @@ unsigned int projection::match_by_Sim3_transform(const std::shared_ptr<data::key
             }
         }
 
-        if (HAMMING_DIST_THR_LOW < best_dist) {
+        if ((lm_desc.type() == CV_8U && HAMMING_DIST_THR_LOW < best_dist) or
+            (lm_desc.type() == CV_32F && HAMMING_L2_DIST_THR_LOW < best_dist)) {
             continue;
         }
 
@@ -436,7 +487,7 @@ unsigned int projection::match_by_Sim3_transform(const std::shared_ptr<data::key
 }
 
 unsigned int projection::match_keyframes_mutually(const std::shared_ptr<data::keyframe>& keyfrm_1, const std::shared_ptr<data::keyframe>& keyfrm_2, std::vector<std::shared_ptr<data::landmark>>& matched_lms_in_keyfrm_1,
-                                                  const float& s_12, const Mat33_t& rot_12, const Vec3_t& trans_12, const float margin) const {
+                                                  const float& s_12, const Mat33_t& rot_12, const Vec3_t& trans_12, const float margin) {
     // The pose of keyframe 1
     const Mat33_t rot_1w = keyfrm_1->get_rot_cw();
     const Vec3_t trans_1w = keyfrm_1->get_trans_cw();
@@ -659,5 +710,4 @@ unsigned int projection::match_keyframes_mutually(const std::shared_ptr<data::ke
     return num_matches;
 }
 
-} // namespace match
-} // namespace stella_vslam
+} // namespace stella_vslam::match

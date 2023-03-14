@@ -272,23 +272,41 @@ unsigned int robust::brute_force_match(const data::frame_observation& frm_obs, c
         const auto& desc_2 = descs_2.row(idx_2);
 
         // Acquire the descriptors in the frame which are the first and second closest to the descriptor in the keyframe
-        unsigned int best_hamm_dist = MAX_HAMMING_DIST;
+        float best_hamm_dist;
         int best_idx_1 = -1;
-        unsigned int second_best_hamm_dist = MAX_HAMMING_DIST;
-
+        float second_best_hamm_dist;
+        if (descs_2.type() == CV_8U) {
+            best_hamm_dist = MAX_HAMMING_DIST;
+            second_best_hamm_dist = MAX_HAMMING_DIST;
+        }
+        else if (descs_2.type() == CV_32F) {
+            best_hamm_dist = MAX_HAMMING_DIST;
+            second_best_hamm_dist = MAX_HAMMING_DIST;
+        }
+        else {
+            assert(false and "wrong desc type");
+        }
         for (unsigned int idx_1 = 0; idx_1 < num_keypts_1; ++idx_1) {
             // Avoid duplication
             if (static_cast<bool>(already_matched_indices_1.count(idx_1))) {
                 continue;
             }
 
-            if (check_orientation_ && std::abs(util::angle::diff(keypts_1.at(idx_1).angle, keypts_2.at(idx_2).angle)) > 30.0) {
+            if (descs_2.type() == CV_8U && check_orientation_ && std::abs(util::angle::diff(keypts_1.at(idx_1).angle, keypts_2.at(idx_2).angle)) > 30.0) {
                 continue;
             }
 
             const auto& desc_1 = descs_1.row(idx_1);
-
-            const auto hamm_dist = compute_descriptor_distance_32(desc_2, desc_1);
+            float hamm_dist;
+            if (descs_1.type() == CV_8U) {
+                hamm_dist = static_cast<float>(compute_descriptor_distance_32(desc_2, desc_1));
+            }
+            else if (descs_1.type() == CV_32F) {
+                hamm_dist = compute_descriptor_distance_l2(desc_2, desc_1);
+            }
+            else {
+                assert(false and "Wrong desc type");
+            }
 
             if (hamm_dist < best_hamm_dist) {
                 second_best_hamm_dist = best_hamm_dist;
@@ -300,7 +318,8 @@ unsigned int robust::brute_force_match(const data::frame_observation& frm_obs, c
             }
         }
 
-        if (HAMMING_DIST_THR_LOW < best_hamm_dist) {
+        if ((descs_2.type() == CV_8U && HAMMING_DIST_THR_LOW < best_hamm_dist) or
+            (descs_2.type() == CV_32F && HAMMING_L2_DIST_THR_LOW < best_hamm_dist)) {
             continue;
         }
 
@@ -309,7 +328,7 @@ unsigned int robust::brute_force_match(const data::frame_observation& frm_obs, c
         }
 
         // Ratio test
-        if (lowe_ratio_ * second_best_hamm_dist < static_cast<float>(best_hamm_dist)) {
+        if (descs_2.type() == CV_8U and lowe_ratio_ * second_best_hamm_dist < static_cast<float>(best_hamm_dist)) {
             continue;
         }
 
@@ -334,7 +353,7 @@ unsigned int robust::brute_force_match(const data::frame_observation& frm_obs, c
 }
 
 bool robust::check_epipolar_constraint(const Vec3_t& bearing_1, const Vec3_t& bearing_2,
-                                       const Mat33_t& E_12, const float bearing_1_scale_factor) const {
+                                       const Mat33_t& E_12, const float bearing_1_scale_factor) {
     // Normal vector of the epipolar plane on keyframe 1
     const Vec3_t epiplane_in_1 = E_12 * bearing_2;
 

@@ -2,8 +2,7 @@
 #include "stella_vslam/match/area.h"
 #include "stella_vslam/util/angle.h"
 
-namespace stella_vslam {
-namespace match {
+namespace stella_vslam::match {
 
 unsigned int area::match_in_consistent_area(data::frame& frm_1, data::frame& frm_2, std::vector<cv::Point2f>& prev_matched_pts,
                                             std::vector<int>& matched_indices_2_in_frm_1, int margin) {
@@ -11,7 +10,13 @@ unsigned int area::match_in_consistent_area(data::frame& frm_1, data::frame& frm
     assert(frm_1.frm_obs_.descriptors_.type() != CV_8U);
     matched_indices_2_in_frm_1 = std::vector<int>(frm_1.frm_obs_.undist_keypts_.size(), -1);
 
-    std::vector<unsigned int> matched_dists_in_frm_2(frm_2.frm_obs_.undist_keypts_.size(), MAX_HAMMING_DIST);
+    std::vector<float> matched_dists_in_frm_2(frm_2.frm_obs_.undist_keypts_.size());
+    if (frm_1.frm_obs_.descriptors_.row(0).type() == CV_32F) {
+        std::fill(matched_dists_in_frm_2.begin(), matched_dists_in_frm_2.end(), MAX_HAMMING_L2_DIST);
+    }
+    else {
+        std::fill(matched_dists_in_frm_2.begin(), matched_dists_in_frm_2.end(), MAX_HAMMING_DIST);
+    }
     std::vector<int> matched_indices_1_in_frm_2(frm_2.frm_obs_.undist_keypts_.size(), -1);
 
     for (unsigned int idx_1 = 0; idx_1 < frm_1.frm_obs_.undist_keypts_.size(); ++idx_1) {
@@ -32,8 +37,19 @@ unsigned int area::match_in_consistent_area(data::frame& frm_1, data::frame& frm
 
         const auto& desc_1 = frm_1.frm_obs_.descriptors_.row(idx_1);
 
-        unsigned int best_hamm_dist = MAX_HAMMING_DIST;
-        unsigned int second_best_hamm_dist = MAX_HAMMING_DIST;
+        float best_hamm_dist = MAX_HAMMING_DIST;
+        float second_best_hamm_dist = MAX_HAMMING_DIST;
+        if (desc_1.type() == CV_32F) {
+            best_hamm_dist = MAX_HAMMING_L2_DIST;
+            second_best_hamm_dist = MAX_HAMMING_L2_DIST;
+        }
+        else if (desc_1.type() == CV_8U) {
+            best_hamm_dist = MAX_HAMMING_DIST;
+            second_best_hamm_dist = MAX_HAMMING_DIST;
+        }
+        else {
+            assert("Wrong desc type");
+        }
         int best_idx_2 = -1;
 
         for (const auto idx_2 : indices) {
@@ -42,9 +58,13 @@ unsigned int area::match_in_consistent_area(data::frame& frm_1, data::frame& frm
             }
 
             const auto& desc_2 = frm_2.frm_obs_.descriptors_.row(idx_2);
-
-            const auto hamm_dist = compute_descriptor_distance_32(desc_1, desc_2);
-
+            float hamm_dist;
+            if (desc_1.type() == CV_32F) {
+                hamm_dist = compute_descriptor_distance_l2(desc_1, desc_2);
+            }
+            else {
+                hamm_dist = static_cast<float>(compute_descriptor_distance_32(desc_1, desc_2));
+            }
             // Ignore if the already-matched point is closer in Hamming space
             if (matched_dists_in_frm_2.at(idx_2) <= hamm_dist) {
                 continue;
@@ -60,7 +80,11 @@ unsigned int area::match_in_consistent_area(data::frame& frm_1, data::frame& frm
             }
         }
 
-        if (HAMMING_DIST_THR_LOW < best_hamm_dist) {
+        if (desc_1.type() == CV_8U and HAMMING_DIST_THR_LOW < best_hamm_dist) {
+            continue;
+        }
+
+        if (desc_1.type() == CV_32F and HAMMING_L2_DIST_THR_LOW < best_hamm_dist) {
             continue;
         }
 
@@ -97,5 +121,4 @@ unsigned int area::match_in_consistent_area(data::frame& frm_1, data::frame& frm
     return num_matches;
 }
 
-} // namespace match
-} // namespace stella_vslam
+} // namespace stella_vslam::match

@@ -420,7 +420,7 @@ bool tracking_module::optimize_current_frame_with_local_map(unsigned int& num_tr
         lm->increase_num_observed();
     }
 
-    constexpr unsigned int num_tracked_lms_thr = 20;
+    constexpr unsigned int num_tracked_lms_thr = 10;
 
     // if recently relocalized, use the more strict threshold
     if (curr_frm_.timestamp_ < last_reloc_frm_timestamp_ + 1.0 && num_tracked_lms < 2 * num_tracked_lms_thr) {
@@ -527,7 +527,8 @@ void tracking_module::search_local_landmarks() {
                              : ((camera_->setup_type_ == camera::setup_type_t::RGBD)
                                     ? 10.0
                                     : 5.0);
-    projection_matcher.match_frame_and_landmarks(curr_frm_, local_landmarks_, lm_to_reproj, lm_to_x_right, lm_to_scale, margin);
+    auto num_matches = projection_matcher.match_frame_and_landmarks(curr_frm_, local_landmarks_, lm_to_reproj, lm_to_x_right, lm_to_scale, margin);
+    spdlog::debug("tracking_module::search_local_landmarks(): num of match frame and local landmarks {}", num_matches);
 }
 
 bool tracking_module::new_keyframe_is_needed(unsigned int num_tracked_lms,

@@ -1,8 +1,8 @@
 # Add sources
 target_sources(${PROJECT_NAME}
         PRIVATE
-#        ${CMAKE_CURRENT_SOURCE_DIR}/hloc.h
-#        ${CMAKE_CURRENT_SOURCE_DIR}/hloc.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/hf_net.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/hf_net.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/hloc_database.h
         ${CMAKE_CURRENT_SOURCE_DIR}/hloc_database.cpp)
 

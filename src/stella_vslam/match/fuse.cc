@@ -78,7 +78,13 @@ unsigned int fuse::detect_duplication(const std::shared_ptr<data::keyframe>& key
         // Find a keypoint with the closest descriptor
         const auto lm_desc = lm->get_descriptor();
 
-        unsigned int best_dist = MAX_HAMMING_DIST;
+        float best_dist = MAX_HAMMING_DIST;
+        if (keyfrm->frm_obs_.descriptors_.type() == CV_8U)
+            best_dist = MAX_HAMMING_DIST;
+        else if (keyfrm->frm_obs_.descriptors_.type() == CV_32F)
+            best_dist = MAX_HAMMING_L2_DIST;
+        else
+            assert("Wrong desc type");
         int best_idx = -1;
 
         for (const auto idx : indices) {
@@ -124,7 +130,11 @@ unsigned int fuse::detect_duplication(const std::shared_ptr<data::keyframe>& key
 
             const auto& desc = keyfrm->frm_obs_.descriptors_.row(idx);
 
-            const auto hamm_dist = compute_descriptor_distance_32(lm_desc, desc);
+            float hamm_dist;
+            if (desc.type() == CV_8U)
+                hamm_dist = static_cast<float>(compute_descriptor_distance_32(lm_desc, desc));
+            else
+                hamm_dist = compute_descriptor_distance_l2(lm_desc, desc);
 
             if (hamm_dist < best_dist) {
                 best_dist = hamm_dist;
@@ -132,7 +142,11 @@ unsigned int fuse::detect_duplication(const std::shared_ptr<data::keyframe>& key
             }
         }
 
-        if (HAMMING_DIST_THR_LOW < best_dist) {
+        if (keyfrm->frm_obs_.descriptors_.type() == CV_8U and HAMMING_DIST_THR_LOW < best_dist) {
+            continue;
+        }
+
+        if (keyfrm->frm_obs_.descriptors_.type() == CV_32F and HAMMING_L2_DIST_THR_LOW < best_dist) {
             continue;
         }
 

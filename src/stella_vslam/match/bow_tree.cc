@@ -5,10 +5,10 @@
 #include "stella_vslam/match/bow_tree.h"
 #include "stella_vslam/util/angle.h"
 
-namespace stella_vslam {
-namespace match {
+namespace stella_vslam::match {
 
-unsigned int bow_tree::match_frame_and_keyframe(const std::shared_ptr<data::keyframe>& keyfrm, data::frame& frm, std::vector<std::shared_ptr<data::landmark>>& matched_lms_in_frm) const {
+unsigned int bow_tree::match_frame_and_keyframe(const std::shared_ptr<data::keyframe>& keyfrm, data::frame& frm,
+                                                std::vector<std::shared_ptr<data::landmark>>& matched_lms_in_frm) const {
     unsigned int num_matches = 0;
 
     assert(keyfrm->frm_obs_.descriptors_.type() != CV_8U);
@@ -18,10 +18,10 @@ unsigned int bow_tree::match_frame_and_keyframe(const std::shared_ptr<data::keyf
 
     const auto keyfrm_lms = keyfrm->get_landmarks();
 
-    data::bow_feature_vector::const_iterator keyfrm_itr = keyfrm->bow_feat_vec_.begin();
-    data::bow_feature_vector::const_iterator frm_itr = frm.bow_feat_vec_.begin();
-    const data::bow_feature_vector::const_iterator kryfrm_end = keyfrm->bow_feat_vec_.end();
-    const data::bow_feature_vector::const_iterator frm_end = frm.bow_feat_vec_.end();
+    auto keyfrm_itr = keyfrm->bow_feat_vec_.begin();
+    auto frm_itr = frm.bow_feat_vec_.begin();
+    const auto kryfrm_end = keyfrm->bow_feat_vec_.end();
+    const auto frm_end = frm.bow_feat_vec_.end();
 
     while (keyfrm_itr != kryfrm_end && frm_itr != frm_end) {
         // Check if the node numbers of BoW tree match
@@ -100,7 +100,9 @@ unsigned int bow_tree::match_frame_and_keyframe(const std::shared_ptr<data::keyf
     return num_matches;
 }
 
-unsigned int bow_tree::match_keyframes(const std::shared_ptr<data::keyframe>& keyfrm_1, const std::shared_ptr<data::keyframe>& keyfrm_2, std::vector<std::shared_ptr<data::landmark>>& matched_lms_in_keyfrm_1) const {
+unsigned int bow_tree::match_keyframes(const std::shared_ptr<data::keyframe>& keyfrm_1,
+                                       const std::shared_ptr<data::keyframe>& keyfrm_2,
+                                       std::vector<std::shared_ptr<data::landmark>>& matched_lms_in_keyfrm_1) const {
     unsigned int num_matches = 0;
 
     const auto keyfrm_1_lms = keyfrm_1->get_landmarks();
@@ -112,10 +114,10 @@ unsigned int bow_tree::match_keyframes(const std::shared_ptr<data::keyframe>& ke
     // NOTE: the size matches the number of the keypoints in keyframe 2
     std::vector<bool> is_already_matched_in_keyfrm_2(keyfrm_2_lms.size(), false);
 
-    data::bow_feature_vector::const_iterator itr_1 = keyfrm_1->bow_feat_vec_.begin();
-    data::bow_feature_vector::const_iterator itr_2 = keyfrm_2->bow_feat_vec_.begin();
-    const data::bow_feature_vector::const_iterator itr_1_end = keyfrm_1->bow_feat_vec_.end();
-    const data::bow_feature_vector::const_iterator itr_2_end = keyfrm_2->bow_feat_vec_.end();
+    auto itr_1 = keyfrm_1->bow_feat_vec_.begin();
+    auto itr_2 = keyfrm_2->bow_feat_vec_.begin();
+    const auto itr_1_end = keyfrm_1->bow_feat_vec_.end();
+    const auto itr_2_end = keyfrm_2->bow_feat_vec_.end();
 
     while (itr_1 != itr_1_end && itr_2 != itr_2_end) {
         // Check if the node numbers of BoW tree match
@@ -209,5 +211,4 @@ unsigned int bow_tree::match_keyframes(const std::shared_ptr<data::keyframe>& ke
     return num_matches;
 }
 
-} // namespace match
 } // namespace stella_vslam

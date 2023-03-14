@@ -139,14 +139,14 @@ public:
     unsigned int num_observations_ = 0;
 
 protected:
-    void compute_mean_normal(const observations_t& observations,
+    static void compute_mean_normal(const observations_t& observations,
                              const Vec3_t& pos_w,
-                             Vec3_t& mean_normal) const;
-    void compute_orb_scale_variance(const observations_t& observations,
+                             Vec3_t& mean_normal) ;
+    static void compute_orb_scale_variance(const observations_t& observations,
                                     const std::shared_ptr<keyframe>& ref_keyfrm,
                                     const Vec3_t& pos_w,
                                     float& max_valid_dist,
-                                    float& min_valid_dist) const;
+                                    float& min_valid_dist) ;
 
 private:
     //! world coordinates of this landmark

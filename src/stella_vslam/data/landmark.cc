@@ -222,21 +222,31 @@ void landmark::compute_descriptor() {
     // Get median of Hamming distance
     // Calculate all the Hamming distances between every pair of the features
     const auto num_descs = descriptors.size();
-    std::vector<std::vector<unsigned int>> hamm_dists(num_descs, std::vector<unsigned int>(num_descs));
+    std::vector<std::vector<float>> hamm_dists(num_descs, std::vector<float>(num_descs));
     for (unsigned int i = 0; i < num_descs; ++i) {
         hamm_dists.at(i).at(i) = 0;
         for (unsigned int j = i + 1; j < num_descs; ++j) {
-            const auto dist = match::compute_descriptor_distance_32(descriptors.at(i), descriptors.at(j));
+            float dist;
+            if (descriptor_.type() == CV_8U) {
+                dist = static_cast<float>(match::compute_descriptor_distance_32(descriptors.at(i), descriptors.at(j)));
+            }
+            else if (descriptor_.type() == CV_32F) {
+                dist = match::compute_descriptor_distance_l2(descriptors.at(i), descriptors.at(j));
+            }
+            else {
+                assert("Unsupported desc type!");
+                return ;
+            }
             hamm_dists.at(i).at(j) = dist;
             hamm_dists.at(j).at(i) = dist;
         }
     }
 
     // Get the nearest value to median
-    unsigned int best_median_dist = match::MAX_HAMMING_DIST;
+    float best_median_dist = match::MAX_HAMMING_DIST;
     unsigned int best_idx = 0;
     for (unsigned idx = 0; idx < num_descs; ++idx) {
-        std::vector<unsigned int> partial_hamm_dists(hamm_dists.at(idx).begin(), hamm_dists.at(idx).begin() + num_descs);
+        std::vector<float> partial_hamm_dists(hamm_dists.at(idx).begin(), hamm_dists.at(idx).begin() + num_descs);
         std::sort(partial_hamm_dists.begin(), partial_hamm_dists.end());
         const auto median_dist = partial_hamm_dists.at(static_cast<unsigned int>(0.5 * (num_descs - 1)));
 
@@ -255,7 +265,7 @@ void landmark::compute_descriptor() {
 
 void landmark::compute_mean_normal(const observations_t& observations,
                                    const Vec3_t& pos_w,
-                                   Vec3_t& mean_normal) const {
+                                   Vec3_t& mean_normal) {
     mean_normal = Vec3_t::Zero();
     for (const auto& observation : observations) {
         auto keyfrm = observation.first.lock();
@@ -269,7 +279,7 @@ void landmark::compute_orb_scale_variance(const observations_t& observations,
                                           const std::shared_ptr<keyframe>& ref_keyfrm,
                                           const Vec3_t& pos_w,
                                           float& max_valid_dist,
-                                          float& min_valid_dist) const {
+                                          float& min_valid_dist) {
     const Vec3_t vec_ref_keyfrm_to_lm = pos_w - ref_keyfrm->get_trans_wc();
     const auto dist_ref_keyfrm_to_lm = vec_ref_keyfrm_to_lm.norm();
     assert(!observations.empty());

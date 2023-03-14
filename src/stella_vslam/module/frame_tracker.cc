@@ -11,8 +11,7 @@
 
 #include <spdlog/spdlog.h>
 
-namespace stella_vslam {
-namespace module {
+namespace stella_vslam::module {
 
 frame_tracker::frame_tracker(camera::base* camera, const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer,
                              const unsigned int num_matches_thr, bool use_fixed_seed)
@@ -69,7 +68,7 @@ bool frame_tracker::bow_match_based_track(data::frame& curr_frm, const data::fra
     if (curr_frm.frm_obs_.descriptors_.type() == CV_32F) {
         num_matches = match::bruce_force::match(ref_keyfrm, curr_frm, matched_lms_in_curr);
     }
-    else if (curr_frm.frm_obs_.descriptors_.type() == CV_32F) {
+    else if (curr_frm.frm_obs_.descriptors_.type() == CV_8U) {
         num_matches = bow_matcher.match_frame_and_keyframe(ref_keyfrm, curr_frm, matched_lms_in_curr);
     }
     else {
@@ -158,5 +157,4 @@ unsigned int frame_tracker::discard_outliers(const std::vector<bool>& outlier_fl
     return num_valid_matches;
 }
 
-} // namespace module
 } // namespace stella_vslam
