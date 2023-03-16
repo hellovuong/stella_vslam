@@ -344,7 +344,7 @@ bool sp_trt::process_output(
     return true;
 }
 
-void sp_trt::visualization(const std::string& image_name,
+[[maybe_unused]] void sp_trt::visualization(const std::string& image_name,
                            const cv::Mat& image) {
     cv::Mat image_display;
     if (image.channels() == 1)
@@ -358,14 +358,16 @@ void sp_trt::visualization(const std::string& image_name,
     cv::imwrite(image_name + ".jpg", image_display);
 }
 
-void sp_trt::visualization(const std::vector<cv::KeyPoint>& kps,
+[[maybe_unused]] void sp_trt::visualization(const std::vector<cv::KeyPoint>& kps,
                            const std::string& image_name,
                            const cv::Mat& image) {
     cv::Mat image_display;
-    if (image.channels() == 1)
+    if (image.channels() == 1) {
         cv::cvtColor(image, image_display, cv::COLOR_GRAY2BGR);
-    else
+    }
+    else {
         image_display = image.clone();
+    }
     for (auto& keypoint : kps) {
         cv::circle(image_display, cv::Point(int(keypoint.pt.x), int(keypoint.pt.y)), 1,
                    cv::Scalar(255, 0, 0), -1, 16);
@@ -543,17 +545,21 @@ std::vector<cv::KeyPoint> sp_trt::detect(const cv::Mat& image, int max) {
 }
 void sp_trt::detect_and_compute(const cv::Mat& image, std::vector<cv::KeyPoint>& kpts, cv::Mat& desc, int max_kpts) {
     assert(image.channels() == 1);
-    if(not infer(image))
-    {
+    if (not infer(image)) {
         spdlog::error("Failed to infer image!");
     }
-    if (max_kpts)
+    if (max_kpts) {
         kpts = detect(image, max_kpts);
-    else
+    }
+    else {
         kpts = detect(image);
-    if (not kpts.empty())
-        desc = compute(kpts).clone();
-    visualization(kpts, "image", image.clone());
+    }
+
     assert(not kpts.empty());
+
+    if (not kpts.empty()) {
+        desc = compute(kpts).clone();
+    }
+    //    visualization(kpts, "image", image.clone());
 }
 } // namespace stella_vslam::feature

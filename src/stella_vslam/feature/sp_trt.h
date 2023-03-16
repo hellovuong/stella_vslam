@@ -25,8 +25,6 @@
 using namespace samplesCommon;
 using namespace sample;
 
-template<typename T>
-using TensorRTUniquePtr = std::unique_ptr<T, InferDeleter>;
 
 namespace stella_vslam::feature {
 
@@ -52,8 +50,8 @@ public:
 
     bool infer(const cv::Mat& image);
 
-    void visualization(const std::string& image_name, const cv::Mat& image);
-    void visualization(const std::vector<cv::KeyPoint>& kps,
+    [[maybe_unused]] void visualization(const std::string& image_name, const cv::Mat& image);
+    [[maybe_unused]] static void visualization(const std::vector<cv::KeyPoint>& kps,
                        const std::string& image_name, const cv::Mat& image);
     void save_engine();
 

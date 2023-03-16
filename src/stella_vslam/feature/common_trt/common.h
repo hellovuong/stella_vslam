@@ -1139,4 +1139,7 @@ inline std::ostream& operator<<(std::ostream& os, const nvinfer1::Dims& dims)
     return os << ")";
 }
 
+template<typename T>
+using TensorRTUniquePtr = std::unique_ptr<T, samplesCommon::InferDeleter>;
+
 #endif // TENSORRT_COMMON_H
