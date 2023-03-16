@@ -68,7 +68,12 @@ bool hf_net::LoadHFNetTRModel() {
         return false;
     }
 
-    SaveEngineToFile(mStrEngineFile, )
+    mContext = std::shared_ptr<IExecutionContext>(mEngine->createExecutionContext());
+    if (!mContext) {
+        return false;
+    }
+
+    SaveEngineToFile(mStrEngineFile, mEngine->serialize());
 
     return true;
 }
@@ -119,8 +124,15 @@ bool hf_net::construct_network(TensorRTUniquePtr<IBuilder>& builder,
     samplesCommon::enableDLA(builder.get(), config.get(), false);
     return true;
 }
-bool hf_net::SaveEngineToFile(const std::string& strEngineSaveFile, const std::unique_ptr<nvinfer1::IHostMemory>& serializedEngine) {
-    return false;
+bool hf_net::SaveEngineToFile(const std::string& strEngineSaveFile, nvinfer1::IHostMemory* serializedEngine) {
+    std::ofstream engineFile(strEngineSaveFile, std::ios::binary);
+    engineFile.write(reinterpret_cast<char const*>(serializedEngine->data()), (long)serializedEngine->size());
+    if (engineFile.fail())
+    {
+        std::cerr << "Saving engine to file failed." << std::endl;
+        return false;
+    }
+    return true;
 }
 
 } // namespace stella_vslam::hloc

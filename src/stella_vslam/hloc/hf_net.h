@@ -67,7 +67,7 @@ protected:
 
     std::string DecideEigenFileName(const std::string& strEngineSaveDir, const nvinfer1::Dims4 inputShape);
 
-    bool SaveEngineToFile(const std::string& strEngineSaveFile, const std::unique_ptr<nvinfer1::IHostMemory>& serializedEngine);
+    static bool SaveEngineToFile(const std::string& strEngineSaveFile, nvinfer1::IHostMemory* serializedEngine);
 
     bool LoadEngineFromFile(const std::string& strEngineSaveFile);
 
