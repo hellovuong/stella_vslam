@@ -95,8 +95,8 @@ protected:
 
     std::unique_ptr<samplesCommon::BufferManager> mpBuffers = nullptr;
 
-    std::vector<RTTensor> mvInputTensors{};
-    std::vector<RTTensor> mvOutputTensors{};
+    std::vector<RTTensor> input_tensors{};
+    std::vector<RTTensor> output_tensors{};
     std::shared_ptr<nvinfer1::IExecutionContext> mContext = nullptr;
 };
 

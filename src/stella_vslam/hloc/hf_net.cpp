@@ -17,6 +17,20 @@ hf_net::hf_net(const hfnet_params& params) {
         spdlog::error("Failed to construct HF_NET!");
         return;
     }
+
+    assert(mEngine);
+    mpBuffers = std::make_unique<samplesCommon::BufferManager>(mEngine);
+
+    input_tensors.clear();
+    input_tensors.emplace_back(mpBuffers->getHostBuffer("image:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("image:0")));
+
+    output_tensors.clear();
+    output_tensors.emplace_back(mpBuffers->getHostBuffer("scores_dense_nms:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("scores_dense_nms:0")));
+    output_tensors.emplace_back(mpBuffers->getHostBuffer("local_descriptor_map:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("local_descriptor_map:0")));
+    output_tensors.emplace_back(mpBuffers->getHostBuffer("global_descriptor:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("global_descriptor:0")));
+
+    assert(not input_tensors.empty());
+    assert(not output_tensors.empty());
     spdlog::info("Constructed HF_NET!");
 }
 
