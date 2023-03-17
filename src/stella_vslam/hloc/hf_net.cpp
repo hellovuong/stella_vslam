@@ -9,11 +9,15 @@ namespace stella_vslam::hloc {
 hf_net::hf_net(const hfnet_params& params) {
     mStrONNXFile = params.onnx_model_path;
     mStrCacheFile = params.cache_path;
-
+    mStrEngineFile = params.engine_path;
     mInputShape = {1, params.image_height, params.image_width, 1};
-    sample::setReportableSeverity(sample::Logger::Severity::kERROR);
-    if (LoadHFNetTRModel())
+
+    sample::setReportableSeverity(sample::Logger::Severity::kVERBOSE);
+    if (not LoadHFNetTRModel()) {
+        spdlog::error("Failed to construct HF_NET!");
         return;
+    }
+    spdlog::info("Constructed HF_NET!");
 }
 
 bool hf_net::LoadHFNetTRModel() {
@@ -25,8 +29,7 @@ bool hf_net::LoadHFNetTRModel() {
     if (!builder) {
         return false;
     }
-    const auto explicit_batch = 1U << static_cast<uint32_t>(
-                                    NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
+    const auto explicit_batch = 1U << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
     auto network = TensorRTUniquePtr<nvinfer1::INetworkDefinition>(builder->createNetworkV2(explicit_batch));
     if (!network) {
         return false;
@@ -40,12 +43,12 @@ bool hf_net::LoadHFNetTRModel() {
         return false;
     }
 
-    network->getInput(0)->setDimensions(mInputShape);
-
     auto constructed = construct_network(builder, config, parser);
     if (!constructed) {
         return false;
     }
+
+    network->getInput(0)->setDimensions(mInputShape);
 
     auto profile_stream = samplesCommon::makeCudaStream();
     if (!profile_stream) {
@@ -80,7 +83,7 @@ bool hf_net::LoadHFNetTRModel() {
 bool hf_net::LoadEngineFromFile(const std::string& strEngineSaveFile) {
     std::ifstream engineFile(strEngineSaveFile, std::ios::binary);
     if (!engineFile.good()) {
-        std::cerr << "Error opening engine file: " << strEngineSaveFile << std::endl;
+        spdlog::error("Error opening engine file: {}. Will generate one!", strEngineSaveFile);
         return false;
     }
     engineFile.seekg(0, std::ifstream::end);
@@ -108,7 +111,7 @@ bool hf_net::LoadEngineFromFile(const std::string& strEngineSaveFile) {
     if (!mContext) {
         return false;
     }
-
+    spdlog::info("Deserialized engine file: {}!", strEngineSaveFile);
     return true;
 }
 bool hf_net::construct_network(TensorRTUniquePtr<IBuilder>& builder,
@@ -121,15 +124,13 @@ bool hf_net::construct_network(TensorRTUniquePtr<IBuilder>& builder,
     }
     config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, 512_MiB);
     config->setFlag(BuilderFlag::kFP16);
-    samplesCommon::enableDLA(builder.get(), config.get(), false);
     return true;
 }
 bool hf_net::SaveEngineToFile(const std::string& strEngineSaveFile, nvinfer1::IHostMemory* serializedEngine) {
     std::ofstream engineFile(strEngineSaveFile, std::ios::binary);
     engineFile.write(reinterpret_cast<char const*>(serializedEngine->data()), (long)serializedEngine->size());
-    if (engineFile.fail())
-    {
-        std::cerr << "Saving engine to file failed." << std::endl;
+    if (engineFile.fail()) {
+        spdlog::error("Saving engine to file failed.");
         return false;
     }
     return true;

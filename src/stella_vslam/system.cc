@@ -23,6 +23,7 @@
 #include "stella_vslam/util/image_converter.h"
 #include "stella_vslam/util/yaml.h"
 #include "stella_vslam/feature/extractor_factory.h"
+#include "stella_vslam/hloc/hf_net.h"
 
 #include <memory>
 #include <thread>
@@ -57,6 +58,8 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     cam_db_->add_camera(camera_);
     map_db_ = new data::map_database(system_params["min_num_shared_lms"].as<unsigned int>(15));
     bow_db_ = new data::bow_database(bow_vocab_);
+
+    hf_net_ = new hloc::hf_net(util::gen_hf_params(cfg->yaml_node_["LoopDetector"]));
 
     // frame and map publisher
     frame_publisher_ = std::make_shared<publish::frame_publisher>(cfg_, map_db_);

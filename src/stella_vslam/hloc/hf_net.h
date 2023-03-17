@@ -32,8 +32,8 @@ struct hfnet_params {
     std::string onnx_model_path;
     std::string cache_path;
     std::string engine_path;
-    std::vector<std::string> input_tensor_names;
-    std::vector<std::string> output_tensor_names;
+    std::vector<std::string> input_tensor_names{};
+    std::vector<std::string> output_tensor_names{};
     int image_width;
     int image_height;
 };
@@ -73,7 +73,7 @@ protected:
 
     void PrintInputAndOutputsInfo(std::unique_ptr<nvinfer1::INetworkDefinition>& network);
 
-    bool Run(void);
+    bool Run();
 
     void GetLocalFeaturesFromTensor(const RTTensor& tScoreDense, const RTTensor& tDescriptorsMap,
                                     std::vector<cv::KeyPoint>& vKeyPoints, cv::Mat& localDescriptors,
@@ -93,7 +93,6 @@ protected:
     std::string mStrCacheFile{};
     std::string mStrEngineFile{};
 
-    bool mbVaild = false;
     std::unique_ptr<samplesCommon::BufferManager> mpBuffers = nullptr;
 
     std::vector<RTTensor> mvInputTensors{};

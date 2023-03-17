@@ -38,6 +38,10 @@ class orb_extractor;
 struct orb_params;
 } // namespace feature
 
+namespace hloc {
+class hf_net;
+} // namespace hloc
+
 namespace marker_detector {
 class base;
 } // namespace marker_detector
@@ -233,6 +237,8 @@ private:
     global_optimization_module* global_optimizer_ = nullptr;
     //! global optimization thread
     std::unique_ptr<std::thread> global_optimization_thread_ = nullptr;
+    //! hf_net
+    hloc::hf_net* hf_net_ = nullptr;
 
     // ORB extractors
     //! ORB extractor for left/monocular image

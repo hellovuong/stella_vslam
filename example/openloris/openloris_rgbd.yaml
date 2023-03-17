@@ -103,6 +103,11 @@ Tracking:
 
 LoopDetector:
   backend: "g2o"
+  image_width: 848
+  image_height: 480
+  onnx_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/HFNet-RT/HF-Net.onnx"
+  cache_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/HFNet-RT/HF-Net.cache"
+  engine_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/HFNet-RT/HF-Net.engine"
 
 #===========================#
 # PangolinViewer Parameters #
