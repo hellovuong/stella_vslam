@@ -5,7 +5,6 @@
 #include "stella_vslam/data/bow_vocabulary.h"
 #include "stella_vslam/module/type.h"
 #include "stella_vslam/module/loop_detector.h"
-#include "stella_vslam/module/loop_detector_hloc.h"
 #include "stella_vslam/module/loop_bundle_adjuster.h"
 #include "stella_vslam/optimize/graph_optimizer.h"
 
@@ -111,8 +110,6 @@ public:
 
     bool request_loop_closure(unsigned int keyfrm1_id, unsigned int keyfrm2_id);
 
-    const std::shared_ptr<module::loop_detector_hloc>& getLoopDetectorHloc() const;
-
 private:
     //-----------------------------------------
     // main process
@@ -135,7 +132,7 @@ private:
     //! Correct the camera poses of the covisibilities
     void correct_covisibility_keyframes(const module::keyframe_Sim3_pairs_t& Sim3s_nw_after_correction) const;
 
-    //! Detect and replace duplicated landmarks
+    //! compute_global_descriptors and replace duplicated landmarks
     void replace_duplicated_landmarks(const std::vector<std::shared_ptr<data::landmark>>& curr_match_lms_observed_in_cand,
                                       const module::keyframe_Sim3_pairs_t& Sim3s_nw_after_correction) const;
 
@@ -265,8 +262,6 @@ private:
 
     //! thread for running loop BA
     std::unique_ptr<std::thread> thread_for_loop_BA_ = nullptr;
-
-    std::shared_ptr<module::loop_detector_hloc> loopDetectorHloc_ = std::make_shared<module::loop_detector_hloc>();
 };
 
 } // namespace stella_vslam

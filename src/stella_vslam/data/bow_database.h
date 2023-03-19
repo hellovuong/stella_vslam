@@ -2,6 +2,7 @@
 #define STELLA_VSLAM_DATA_BOW_DATABASE_H
 
 #include "stella_vslam/data/bow_vocabulary.h"
+#include "stella_vslam/data/base_place_recognition.h"
 
 #include <mutex>
 #include <list>
@@ -11,13 +12,12 @@
 #include <unordered_set>
 #include <memory>
 
-namespace stella_vslam {
-namespace data {
+namespace stella_vslam::data {
 
 class frame;
 class keyframe;
 
-class bow_database {
+class bow_database : public base_place_recognition {
 public:
     /**
      * Constructor
@@ -31,33 +31,12 @@ public:
     ~bow_database();
 
     /**
-     * Add a keyframe to the database
-     * @param keyfrm
-     */
-    void add_keyframe(const std::shared_ptr<keyframe>& keyfrm);
-
-    /**
-     * Erase the keyframe from the database
-     * @param keyfrm
-     */
-    void erase_keyframe(const std::shared_ptr<keyframe>& keyfrm);
-
-    /**
-     * Clear the database
-     */
-    void clear();
-
-    /**
      * Acquire keyframes over score
      */
     std::vector<std::shared_ptr<keyframe>> acquire_keyframes(const bow_vector& bow_vec, const float min_score = 0.0f,
                                                              const std::set<std::shared_ptr<keyframe>>& keyfrms_to_reject = {});
 
 protected:
-    /**
-     * Initialize temporary variables
-     */
-    void initialize();
 
     /**
      * Compute the number of shared words
@@ -84,21 +63,12 @@ protected:
                    float& best_score) const;
 
     //-----------------------------------------
-    // BoW feature vectors
-
-    //! mutex to access BoW database
-    mutable std::mutex mtx_;
-    //! BoW database
-    std::unordered_map<unsigned int, std::list<std::shared_ptr<keyframe>>> keyfrms_in_node_;
-
-    //-----------------------------------------
     // BoW vocabulary
 
     //! BoW vocabulary
     bow_vocabulary* bow_vocab_;
 };
 
-} // namespace data
 } // namespace stella_vslam
 
 #endif // STELLA_VSLAM_DATA_BOW_DATABASE_H

@@ -45,9 +45,6 @@ public:
 
     bool build();
 
-    bool infer(const cv::Mat& image,
-               Eigen::Matrix<double, 259, Eigen::Dynamic>& features);
-
     bool infer(const cv::Mat& image);
 
     [[maybe_unused]] void visualization(const std::string& image_name, const cv::Mat& image);

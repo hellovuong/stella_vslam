@@ -228,7 +228,9 @@ void mapping_module::store_new_keyframe() {
     if (!cur_keyfrm_->bow_is_available()) {
         cur_keyfrm_->compute_bow(bow_vocab_);
     }
-
+    if (!cur_keyfrm_->global_desc_is_available()) {
+        cur_keyfrm_->compute_global_desc(hf_net_);
+    }
     // Set landmarks into local_map_cleaner to exclude invalid landmarks
     const auto cur_lms = cur_keyfrm_->get_landmarks();
     for (unsigned int idx = 0; idx < cur_lms.size(); ++idx) {
@@ -619,6 +621,9 @@ void mapping_module::terminate() {
         promise_terminate_ = std::promise<void>();
         future_terminate_ = std::shared_future<void>();
     }
+}
+void mapping_module::setHfNet(hloc::hf_net* hfNet) {
+    hf_net_ = hfNet;
 }
 
 } // namespace stella_vslam

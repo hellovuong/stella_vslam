@@ -15,6 +15,8 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/map_database.h
                ${CMAKE_CURRENT_SOURCE_DIR}/bow_database.h
                ${CMAKE_CURRENT_SOURCE_DIR}/frame_statistics.h
+               ${CMAKE_CURRENT_SOURCE_DIR}/base_place_recognition.h
+               ${CMAKE_CURRENT_SOURCE_DIR}/hf_net_database.h
                ${CMAKE_CURRENT_SOURCE_DIR}/bow_vocabulary.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/common.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/frame.cc
@@ -27,7 +29,9 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/orb_params_database.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/map_database.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/bow_database.cc
-               ${CMAKE_CURRENT_SOURCE_DIR}/frame_statistics.cc)
+               ${CMAKE_CURRENT_SOURCE_DIR}/frame_statistics.cc
+               ${CMAKE_CURRENT_SOURCE_DIR}/base_place_recognition.cpp
+               ${CMAKE_CURRENT_SOURCE_DIR}/hf_net_database.cpp)
 
 # Install headers
 file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")

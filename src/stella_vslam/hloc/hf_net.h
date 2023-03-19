@@ -9,6 +9,7 @@
 
 #include <opencv2/core/matx.hpp>
 #include <opencv2/core/types.hpp>
+#include <opencv2/core.hpp>
 
 #include <NvInferRuntime.h>
 #include <NvOnnxParser.h>
@@ -50,7 +51,7 @@ public:
     bool Detect(const cv::Mat& image, std::vector<cv::KeyPoint>& vKeyPoints, cv::Mat& localDescriptors,
                 int nKeypointsNum, float threshold);
 
-    bool Detect(const cv::Mat& intermediate, cv::Mat& globalDescriptors);
+    bool compute_global_descriptors(const cv::Mat& img, cv::Mat& globalDescriptors);
 
     std::shared_ptr<nvinfer1::ICudaEngine> mEngine = nullptr;
 
@@ -73,15 +74,15 @@ protected:
 
     void PrintInputAndOutputsInfo(std::unique_ptr<nvinfer1::INetworkDefinition>& network);
 
-    bool Run();
+    bool infer();
 
     void GetLocalFeaturesFromTensor(const RTTensor& tScoreDense, const RTTensor& tDescriptorsMap,
                                     std::vector<cv::KeyPoint>& vKeyPoints, cv::Mat& localDescriptors,
                                     int nKeypointsNum, float threshold);
 
-    void GetGlobalDescriptorFromTensor(const RTTensor& tDescriptors, cv::Mat& globalDescriptors);
+    static void GetGlobalDescriptorFromTensor(const RTTensor& tDescriptors, cv::Mat& globalDescriptors);
 
-    void Mat2Tensor(const cv::Mat& mat, RTTensor& tensor);
+    static void Mat2Tensor(const cv::Mat& mat, RTTensor& tensor);
 
     void Tensor2Mat(const RTTensor& tensor, cv::Mat& mat);
 

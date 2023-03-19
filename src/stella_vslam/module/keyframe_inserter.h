@@ -47,7 +47,7 @@ public:
     /**
      * Insert the new keyframe derived from the current frame
      */
-    std::shared_ptr<data::keyframe> insert_new_keyframe(data::map_database* map_db, data::frame& curr_frm);
+    std::shared_ptr<data::keyframe> insert_new_keyframe(data::map_database* map_db, data::frame& curr_frm, const cv::Mat& img = cv::Mat());
 
 private:
     /**

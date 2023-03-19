@@ -10,12 +10,13 @@
 #include "stella_vslam/data/bow_vocabulary.h"
 #include "stella_vslam/feature/orb_params.h"
 #include "stella_vslam/util/converter.h"
+#include "stella_vslam/hloc/hf_net.h"
 
 #include <nlohmann/json.hpp>
+#include <utility>
 #include <spdlog/spdlog.h>
 
-namespace stella_vslam {
-namespace data {
+namespace stella_vslam::data {
 
 keyframe::keyframe(unsigned int id, const frame& frm)
     : id_(id), timestamp_(frm.timestamp_),
@@ -294,10 +295,12 @@ bool keyframe::bow_is_available() const {
 void keyframe::compute_bow(bow_vocabulary* bow_vocab) {
     bow_vocabulary_util::compute_bow(bow_vocab, frm_obs_.descriptors_, bow_vec_, bow_feat_vec_);
 }
-
+void keyframe::compute_global_desc(hloc::hf_net* hf_net) {
+    hf_net->compute_global_descriptors(img, frm_obs_.global_descriptors_);
+}
 void keyframe::add_landmark(std::shared_ptr<landmark> lm, const unsigned int idx) {
     std::lock_guard<std::mutex> lock(mtx_observations_);
-    landmarks_.at(idx) = lm;
+    landmarks_.at(idx) = std::move(lm);
 }
 
 void keyframe::erase_landmark_with_index(const unsigned int idx) {
@@ -521,6 +524,8 @@ void keyframe::prepare_for_erasing(map_database* map_db, bow_database* bow_db) {
 bool keyframe::will_be_erased() {
     return will_be_erased_;
 }
+bool keyframe::global_desc_is_available() const {
+    return static_cast<bool>(not frm_obs_.global_descriptors_.empty());
+}
 
-} // namespace data
 } // namespace stella_vslam

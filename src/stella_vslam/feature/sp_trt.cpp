@@ -105,43 +105,6 @@ bool sp_trt::construct_network(
     return true;
 }
 
-bool sp_trt::infer(const cv::Mat& image,
-                   Eigen::Matrix<double, 259, Eigen::Dynamic>& features) {
-    if (!context_) {
-        context_ = TensorRTUniquePtr<nvinfer1::IExecutionContext>(
-            engine_->createExecutionContext());
-        if (!context_) {
-            return false;
-        }
-    }
-
-    assert(engine_->getNbBindings() == 3);
-
-    const int input_index = engine_->getBindingIndex(
-        super_point_config_.input_tensor_names[0].c_str());
-
-    context_->setBindingDimensions(input_index,
-                                   Dims4(1, 1, image.rows, image.cols));
-
-    BufferManager buffers(engine_, 0, context_.get());
-
-    ASSERT(super_point_config_.input_tensor_names.size() == 1);
-    if (!process_input(buffers, image)) {
-        return false;
-    }
-    buffers.copyInputToDevice();
-
-    bool status = context_->executeV2(buffers.getDeviceBindings().data());
-    if (!status) {
-        return false;
-    }
-    buffers.copyOutputToHost();
-    if (!process_output(buffers, features)) {
-        return false;
-    }
-    return true;
-}
-
 bool sp_trt::process_input(const BufferManager& buffers,
                            const cv::Mat& image) {
     input_dims_.d[2] = image.rows;

@@ -50,7 +50,7 @@ public:
     void set_current_keyframe(const std::shared_ptr<data::keyframe>& keyfrm);
 
     /**
-     * Detect loop candidates using BoW vocabulary
+     * compute_global_descriptors loop candidates using BoW vocabulary
      */
     bool detect_loop_candidates();
 

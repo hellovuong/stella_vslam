@@ -5,54 +5,15 @@
 
 #include <spdlog/spdlog.h>
 
-namespace stella_vslam {
-namespace data {
+namespace stella_vslam::data {
 
 bow_database::bow_database(bow_vocabulary* bow_vocab)
-    : bow_vocab_(bow_vocab) {
+    : base_place_recognition(place_recognition_type::BoW), bow_vocab_(bow_vocab) {
     spdlog::debug("CONSTRUCT: data::bow_database");
 }
 
 bow_database::~bow_database() {
-    clear();
     spdlog::debug("DESTRUCT: data::bow_database");
-}
-
-void bow_database::add_keyframe(const std::shared_ptr<keyframe>& keyfrm) {
-    std::lock_guard<std::mutex> lock(mtx_);
-
-    // Append keyframe to the corresponding index in keyframes_in_node_ list
-    for (const auto& node_id_and_weight : keyfrm->bow_vec_) {
-        keyfrms_in_node_[node_id_and_weight.first].push_back(keyfrm);
-    }
-}
-
-void bow_database::erase_keyframe(const std::shared_ptr<keyframe>& keyfrm) {
-    std::lock_guard<std::mutex> lock(mtx_);
-
-    // Delete keyframe from the coresponding index in keyframes_in_node_ list
-    for (const auto& node_id_and_weight : keyfrm->bow_vec_) {
-        // first: node ID, second: weight
-        if (!static_cast<bool>(keyfrms_in_node_.count(node_id_and_weight.first))) {
-            continue;
-        }
-        // Obtain keyframe which shares word
-        auto& keyfrms_in_node = keyfrms_in_node_.at(node_id_and_weight.first);
-
-        // std::list::erase only accepts iterator
-        for (auto itr = keyfrms_in_node.begin(), lend = keyfrms_in_node.end(); itr != lend; itr++) {
-            if (keyfrm->id_ == (*itr)->id_) {
-                keyfrms_in_node.erase(itr);
-                break;
-            }
-        }
-    }
-}
-
-void bow_database::clear() {
-    std::lock_guard<std::mutex> lock(mtx_);
-    spdlog::info("clear BoW database");
-    keyfrms_in_node_.clear();
 }
 
 std::vector<std::shared_ptr<keyframe>> bow_database::acquire_keyframes(const bow_vector& bow_vec, const float min_score,
@@ -62,7 +23,7 @@ std::vector<std::shared_ptr<keyframe>> bow_database::acquire_keyframes(const bow
 
     const auto num_common_words = compute_num_common_words(bow_vec, keyfrms_to_reject);
     if (num_common_words.empty()) {
-        return std::vector<std::shared_ptr<keyframe>>();
+        return {};
     }
 
     // Set min_num_common_words_thr as 80 percentile of max_num_common_words
@@ -83,7 +44,7 @@ std::vector<std::shared_ptr<keyframe>> bow_database::acquire_keyframes(const bow
     float best_score = min_score;
     const auto scores = compute_scores(num_common_words, bow_vec, min_num_common_words_thr, min_score, best_score);
     if (scores.empty()) {
-        return std::vector<std::shared_ptr<keyframe>>();
+        return {};
     }
 
     std::unordered_set<std::shared_ptr<keyframe>> final_candidates;
@@ -91,7 +52,7 @@ std::vector<std::shared_ptr<keyframe>> bow_database::acquire_keyframes(const bow
         const auto keyfrm = keyfrm_score.first;
         final_candidates.insert(keyfrm);
     }
-    return std::vector<std::shared_ptr<keyframe>>(final_candidates.begin(), final_candidates.end());
+    return {final_candidates.begin(), final_candidates.end()};
 }
 
 std::unordered_map<std::shared_ptr<keyframe>, unsigned int>
@@ -157,5 +118,4 @@ bow_database::compute_scores(const std::unordered_map<std::shared_ptr<keyframe>,
     return scores;
 }
 
-} // namespace data
 } // namespace stella_vslam

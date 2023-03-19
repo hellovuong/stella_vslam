@@ -104,7 +104,7 @@ bool keyframe_inserter::new_keyframe_is_needed(data::map_database* map_db,
 }
 
 std::shared_ptr<data::keyframe> keyframe_inserter::insert_new_keyframe(data::map_database* map_db,
-                                                                       data::frame& curr_frm) {
+                                                                       data::frame& curr_frm, const cv::Mat& img) {
     auto keyfrm = data::keyframe::make_keyframe(map_db->next_keyframe_id_++, curr_frm);
     keyfrm->update_landmarks();
 
@@ -183,6 +183,9 @@ std::shared_ptr<data::keyframe> keyframe_inserter::insert_new_keyframe(data::map
 
         map_db->add_landmark(lm);
     }
+
+    // image
+    keyfrm->img = img.clone();
 
     // Queue up the keyframe to the mapping module
     queue_keyframe(keyfrm);

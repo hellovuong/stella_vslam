@@ -161,7 +161,7 @@ bool initializer::try_initialize_for_monocular(data::frame& curr_frm) {
     return initializer_->initialize(curr_frm, init_matches_);
 }
 
-bool initializer::create_map_for_monocular(data::bow_vocabulary* bow_vocab, data::frame& curr_frm) {
+bool initializer::create_map_for_monocular(data::bow_vocabulary* bow_vocab, data::frame& curr_frm, hloc::hf_net* hf_net) {
     assert(state_ == initializer_state_t::Initializing);
 
     eigen_alloc_vector<Vec3_t> init_triangulated_pts;
@@ -204,6 +204,12 @@ bool initializer::create_map_for_monocular(data::bow_vocabulary* bow_vocab, data
     // compute BoW representations
     init_keyfrm->compute_bow(bow_vocab);
     curr_keyfrm->compute_bow(bow_vocab);
+
+    // compute global desc
+    if (hf_net) {
+        init_keyfrm->compute_global_desc(hf_net);
+        curr_keyfrm->compute_global_desc(hf_net);
+    }
 
     // add the keyframes to the map DB
     map_db_->add_keyframe(init_keyfrm);
@@ -324,7 +330,7 @@ bool initializer::try_initialize_for_stereo(data::frame& curr_frm) {
     return min_num_triangulated_pts_ <= num_valid_depths;
 }
 
-bool initializer::create_map_for_stereo(data::bow_vocabulary* bow_vocab, data::frame& curr_frm) {
+bool initializer::create_map_for_stereo(data::bow_vocabulary* bow_vocab, data::frame& curr_frm, hloc::hf_net* hf_net) {
     assert(state_ == initializer_state_t::Initializing);
 
     // create an initial keyframe
@@ -335,6 +341,10 @@ bool initializer::create_map_for_stereo(data::bow_vocabulary* bow_vocab, data::f
 
     // compute BoW representation
     curr_keyfrm->compute_bow(bow_vocab);
+
+    if (hf_net) {
+        curr_keyfrm->compute_global_desc(hf_net);
+    }
 
     // add to the map DB
     map_db_->add_keyframe(curr_keyfrm);

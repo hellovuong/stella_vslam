@@ -25,6 +25,10 @@ namespace camera {
 class base;
 } // namespace camera
 
+namespace hloc {
+class hf_net;
+}
+
 namespace data {
 
 class frame;
@@ -146,9 +150,19 @@ public:
     bool bow_is_available() const;
 
     /**
+     * Returns true if BoW has been computed.
+     */
+    bool global_desc_is_available() const;
+
+    /**
      * Compute BoW representation
      */
     void compute_bow(bow_vocabulary* bow_vocab);
+
+    /**
+     * Compute BoW representation
+     */
+    void compute_global_desc(hloc::hf_net* hf_net);
 
     /**
      * Add a landmark observed by myself at keypoint idx
@@ -270,7 +284,7 @@ public:
     //-----------------------------------------
     // constant observations
 
-    const frame_observation frm_obs_;
+    frame_observation frm_obs_;
 
     //! observed markers 2D (ID to marker2d map)
     std::unordered_map<unsigned int, marker2d> markers_2d_;

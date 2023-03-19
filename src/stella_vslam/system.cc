@@ -105,6 +105,7 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     tracker_->set_global_optimization_module(global_optimizer_);
     mapper_->set_tracking_module(tracker_);
     mapper_->set_global_optimization_module(global_optimizer_);
+    mapper_->setHfNet(hf_net_);
     global_optimizer_->set_tracking_module(tracker_);
     global_optimizer_->set_mapping_module(mapper_);
 }
@@ -134,6 +135,9 @@ system::~system() {
     extractor_left_ = nullptr;
     delete extractor_right_;
     extractor_right_ = nullptr;
+
+    delete hf_net_;
+    hf_net_ = nullptr;
 
     delete marker_detector_;
     marker_detector_ = nullptr;

@@ -277,8 +277,16 @@ float loop_detector::compute_min_score_in_covisibilities(const std::shared_ptr<d
             continue;
         }
         const auto& bow_vec_2 = covisibility->bow_vec_;
-
-        const auto score = data::bow_vocabulary_util::score(bow_vocab_, bow_vec_1, bow_vec_2);
+        float score = 0.f;
+        if (bow_db_->database_type == data::place_recognition_type::BoW) {
+            score = data::bow_vocabulary_util::score(bow_vocab_, bow_vec_1, bow_vec_2);
+        }
+        else if (bow_db_->database_type == data::place_recognition_type::HF_Net) {
+            score = data::base_place_recognition::compute_score(keyfrm->frm_obs_.global_descriptors_, covisibility->frm_obs_.global_descriptors_);
+        }
+        else {
+            assert(bow_db_->database_type == data::place_recognition_type::BoW or bow_db_->database_type == data::place_recognition_type::HF_Net);
+        }
         if (score < min_score) {
             min_score = score;
         }

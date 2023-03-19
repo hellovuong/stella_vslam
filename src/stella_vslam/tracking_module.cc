@@ -545,11 +545,10 @@ bool tracking_module::new_keyframe_is_needed(unsigned int num_tracked_lms,
 
 void tracking_module::insert_new_keyframe() {
     // insert the new keyframe
-    const auto ref_keyfrm = keyfrm_inserter_.insert_new_keyframe(map_db_, curr_frm_);
+    const auto ref_keyfrm = keyfrm_inserter_.insert_new_keyframe(map_db_, curr_frm_, curr_img_.clone());
     // set the reference keyframe with the new keyframe
     if (ref_keyfrm) {
         curr_frm_.ref_keyfrm_ = ref_keyfrm;
-        ref_keyfrm->img = curr_img_.clone();
     }
 }
 

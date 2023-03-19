@@ -24,6 +24,10 @@ namespace camera {
 class base;
 } // namespace camera
 
+namespace hloc {
+class hf_net;
+}
+
 namespace data {
 class keyframe;
 class bow_database;
@@ -112,6 +116,8 @@ public:
     //! Mutex for blocking tracking until we're done
     std::mutex mtx_processing_;
 #endif
+
+    void setHfNet(hloc::hf_net* hfNet);
 
 private:
     //-----------------------------------------
@@ -227,6 +233,8 @@ private:
     //! BoW vocabulary
     data::bow_vocabulary* bow_vocab_ = nullptr;
 
+    //! HF_net
+    hloc::hf_net* hf_net_ = nullptr;
     //-----------------------------------------
     // keyframe queue
 

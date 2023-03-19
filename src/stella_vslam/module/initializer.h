@@ -11,6 +11,10 @@ namespace stella_vslam {
 
 class config;
 
+namespace hloc {
+class hf_net;
+}
+
 namespace data {
 class frame;
 class map_database;
@@ -100,7 +104,7 @@ private:
     bool try_initialize_for_monocular(data::frame& curr_frm);
 
     //! Create an initial map with monocular camera setup
-    bool create_map_for_monocular(data::bow_vocabulary* bow_vocab, data::frame& curr_frm);
+    bool create_map_for_monocular(data::bow_vocabulary* bow_vocab, data::frame& curr_frm, hloc::hf_net* hf_net = nullptr);
 
     //! Scaling up or down a initial map
     void scale_map(const std::shared_ptr<data::keyframe>& init_keyfrm, const std::shared_ptr<data::keyframe>& curr_keyfrm, const double scale);
@@ -121,7 +125,7 @@ private:
     bool try_initialize_for_stereo(data::frame& curr_frm);
 
     //! Create an initial map with stereo or RGBD camera setup
-    bool create_map_for_stereo(data::bow_vocabulary* bow_vocab, data::frame& curr_frm);
+    bool create_map_for_stereo(data::bow_vocabulary* bow_vocab, data::frame& curr_frm, hloc::hf_net* hf_net = nullptr);
 };
 
 } // namespace module

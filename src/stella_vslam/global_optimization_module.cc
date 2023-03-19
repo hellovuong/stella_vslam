@@ -170,7 +170,6 @@ void global_optimization_module::run() {
 
             // pass the current keyframe to the loop detector
             loop_detector_->set_current_keyframe(cur_keyfrm_);
-            loopDetectorHloc_->set_current_keyframe(cur_keyfrm_);
 
             // detect some loop candidate with BoW
             if (!loop_detector_->detect_loop_candidates()) {
@@ -613,9 +612,6 @@ bool global_optimization_module::loop_BA_is_running() const {
 
 void global_optimization_module::abort_loop_BA() {
     loop_bundle_adjuster_->abort();
-}
-const std::shared_ptr<module::loop_detector_hloc>& global_optimization_module::getLoopDetectorHloc() const {
-    return loopDetectorHloc_;
 }
 
 } // namespace stella_vslam

@@ -17,26 +17,13 @@ hf_net::hf_net(const hfnet_params& params) {
         spdlog::error("Failed to construct HF_NET!");
         return;
     }
-
-    assert(mEngine);
-    mpBuffers = std::make_unique<samplesCommon::BufferManager>(mEngine);
-
-    input_tensors.clear();
-    input_tensors.emplace_back(mpBuffers->getHostBuffer("image:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("image:0")));
-
-    output_tensors.clear();
-    output_tensors.emplace_back(mpBuffers->getHostBuffer("scores_dense_nms:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("scores_dense_nms:0")));
-    output_tensors.emplace_back(mpBuffers->getHostBuffer("local_descriptor_map:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("local_descriptor_map:0")));
-    output_tensors.emplace_back(mpBuffers->getHostBuffer("global_descriptor:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("global_descriptor:0")));
-
-    assert(not input_tensors.empty());
-    assert(not output_tensors.empty());
     spdlog::info("Constructed HF_NET!");
 }
 
 bool hf_net::LoadHFNetTRModel() {
-    if (LoadEngineFromFile(mStrEngineFile))
+    if (LoadEngineFromFile(mStrEngineFile)) {
         return true;
+    }
 
     spdlog::info("Start to build HFNet engine. It will take a while...");
     auto builder = TensorRTUniquePtr<nvinfer1::IBuilder>(nvinfer1::createInferBuilder(sample::gLogger.getTRTLogger()));
@@ -138,6 +125,7 @@ bool hf_net::construct_network(TensorRTUniquePtr<IBuilder>& builder,
     }
     config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, 512_MiB);
     config->setFlag(BuilderFlag::kFP16);
+    samplesCommon::enableDLA(builder.get(), config.get(), -1);
     return true;
 }
 bool hf_net::SaveEngineToFile(const std::string& strEngineSaveFile, nvinfer1::IHostMemory* serializedEngine) {
@@ -148,6 +136,75 @@ bool hf_net::SaveEngineToFile(const std::string& strEngineSaveFile, nvinfer1::IH
         return false;
     }
     return true;
+}
+bool hf_net::compute_global_descriptors(const cv::Mat& img, cv::Mat& globalDescriptors) {
+
+
+    assert(mEngine);
+
+    if (!mContext) {
+        mContext = TensorRTUniquePtr<nvinfer1::IExecutionContext>(mEngine->createExecutionContext());
+        if (!mContext) {
+            return false;
+        }
+    }
+    const int input_index = mEngine->getBindingIndex("image:0");
+    mContext->setBindingDimensions(input_index, mInputShape);
+    mpBuffers.reset();
+    mpBuffers = std::make_unique<samplesCommon::BufferManager>(mEngine, 0, mContext.get());
+    input_tensors.clear();
+    input_tensors.emplace_back(mpBuffers->getHostBuffer("image:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("image:0")));
+
+    output_tensors.clear();
+    output_tensors.emplace_back(mpBuffers->getHostBuffer("scores_dense_nms:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("scores_dense_nms:0")));
+    output_tensors.emplace_back(mpBuffers->getHostBuffer("local_descriptor_map:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("local_descriptor_map:0")));
+    output_tensors.emplace_back(mpBuffers->getHostBuffer("global_descriptor:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("global_descriptor:0")));
+
+    // prepare input
+    Mat2Tensor(img, input_tensors[0]);
+
+    assert(not input_tensors.empty());
+    assert(not output_tensors.empty());
+
+    // infer
+    if (!infer()) {
+        return false;
+    }
+    // get output
+    GetGlobalDescriptorFromTensor(output_tensors[2], globalDescriptors);
+
+    return true;
+}
+void hf_net::Mat2Tensor(const cv::Mat& mat, RTTensor& tensor) {
+    cv::Mat fromMat(mat.rows, mat.cols, CV_32FC(mat.channels()), static_cast<float*>(tensor.data));
+    mat.convertTo(fromMat, CV_32F);
+}
+bool hf_net::infer() {
+    if (input_tensors.empty()) {
+        return false;
+    }
+
+    // Memcpy from host input buffers to device input buffers
+    mpBuffers->copyInputToDevice();
+    assert(mpBuffers->getDeviceBindings().data());
+    assert(mContext);
+    bool status = mContext->executeV2(mpBuffers->getDeviceBindings().data());
+    if (!status) {
+        spdlog::warn("Failed to execute hf");
+        return false;
+    }
+
+    // Memcpy from device output buffers to host output buffers
+    mpBuffers->copyOutputToHost();
+
+    return true;
+}
+void hf_net::GetGlobalDescriptorFromTensor(const RTTensor& tDescriptors, cv::Mat& globalDescriptors) {
+    auto vResGlobalDescriptor = static_cast<float*>(tDescriptors.data);
+    globalDescriptors = cv::Mat(4096, 1, CV_32F);
+    for (int temp = 0; temp < 4096; ++temp) {
+        globalDescriptors.ptr<float>(0)[temp] = vResGlobalDescriptor[temp];
+    }
 }
 
 } // namespace stella_vslam::hloc

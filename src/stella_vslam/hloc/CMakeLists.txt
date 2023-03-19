@@ -2,9 +2,7 @@
 target_sources(${PROJECT_NAME}
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/hf_net.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/hf_net.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/hloc_database.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/hloc_database.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/hf_net.cpp)
 
 # Install headers
 file(GLOB HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/*.h")

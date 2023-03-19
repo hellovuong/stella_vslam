@@ -24,6 +24,8 @@ struct frame_observation {
     unsigned int num_keypts_ = 0;
     //! descriptors
     cv::Mat descriptors_;
+    //! global descriptors
+    cv::Mat global_descriptors_;
     //! undistorted keypoints of monocular or stereo left image
     std::vector<cv::KeyPoint> undist_keypts_;
     //! bearing vectors
