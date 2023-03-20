@@ -184,6 +184,7 @@ std::shared_ptr<data::keyframe> keyframe_inserter::insert_new_keyframe(data::map
         map_db->add_landmark(lm);
     }
 
+    assert(not img.empty());
     // image
     keyfrm->img = img.clone();
 
@@ -193,6 +194,7 @@ std::shared_ptr<data::keyframe> keyframe_inserter::insert_new_keyframe(data::map
 }
 
 void keyframe_inserter::queue_keyframe(const std::shared_ptr<data::keyframe>& keyfrm) {
+    spdlog::info("queue kf from keyframe inserter");
     mapper_->queue_keyframe(keyfrm);
 }
 

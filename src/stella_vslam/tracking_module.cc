@@ -261,9 +261,11 @@ bool tracking_module::initialize() {
         return false;
     }
 
-    // pass all of the keyframes to the mapping module
+    // pass all the keyframes to the mapping module
     assert(!is_stopped_keyframe_insertion_);
     for (const auto& keyfrm : curr_frm_.ref_keyfrm_->graph_node_->get_keyframes_from_root()) {
+        // TODO: this trick only works for stereo/rgbd case
+        keyfrm->img = curr_img_.clone();
         mapper_->queue_keyframe(keyfrm);
     }
 

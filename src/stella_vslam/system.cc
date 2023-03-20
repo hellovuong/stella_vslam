@@ -474,10 +474,10 @@ std::shared_ptr<Mat44_t> system::feed_RGBD_frame(const cv::Mat& rgb_img, const c
 std::shared_ptr<Mat44_t> system::feed_frame(const data::frame& frm, const cv::Mat& img) {
     check_reset_request();
 
-    const auto start = std::chrono::system_clock::now();
-
-    const auto cam_pose_wc = tracker_->feed_frame(frm);
     tracker_->curr_img_ = img.clone();
+
+    const auto start = std::chrono::system_clock::now();
+    const auto cam_pose_wc = tracker_->feed_frame(frm);
     const auto end = std::chrono::system_clock::now();
     double elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 

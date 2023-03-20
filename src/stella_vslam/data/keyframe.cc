@@ -295,8 +295,9 @@ bool keyframe::bow_is_available() const {
 void keyframe::compute_bow(bow_vocabulary* bow_vocab) {
     bow_vocabulary_util::compute_bow(bow_vocab, frm_obs_.descriptors_, bow_vec_, bow_feat_vec_);
 }
+
 void keyframe::compute_global_desc(hloc::hf_net* hf_net) {
-    hf_net->compute_global_descriptors(img, frm_obs_.global_descriptors_);
+    hf_net->compute_global_descriptors(img.clone(), frm_obs_.global_descriptors_);
 }
 void keyframe::add_landmark(std::shared_ptr<landmark> lm, const unsigned int idx) {
     std::lock_guard<std::mutex> lock(mtx_observations_);
