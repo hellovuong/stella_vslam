@@ -17,6 +17,15 @@ hf_net::hf_net(const hfnet_params& params) {
         spdlog::error("Failed to construct HF_NET!");
         return;
     }
+
+    mpBuffers = std::make_unique<samplesCommon::BufferManager>(mEngine);
+
+    input_tensors.emplace_back(mpBuffers->getHostBuffer("image:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("image:0")));
+
+    output_tensors.emplace_back(mpBuffers->getHostBuffer("scores_dense_nms:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("scores_dense_nms:0")));
+    output_tensors.emplace_back(mpBuffers->getHostBuffer("local_descriptor_map:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("local_descriptor_map:0")));
+    output_tensors.emplace_back(mpBuffers->getHostBuffer("global_descriptor:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("global_descriptor:0")));
+
     spdlog::info("Constructed HF_NET!");
 }
 
@@ -123,7 +132,7 @@ bool hf_net::construct_network(TensorRTUniquePtr<IBuilder>& builder,
     if (!parsed) {
         return false;
     }
-    config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, 512_MiB);
+    config->setMemoryPoolLimit(nvinfer1::MemoryPoolType::kWORKSPACE, 2 << 20);
     config->setFlag(BuilderFlag::kFP16);
     samplesCommon::enableDLA(builder.get(), config.get(), -1);
     return true;
@@ -138,34 +147,9 @@ bool hf_net::SaveEngineToFile(const std::string& strEngineSaveFile, nvinfer1::IH
     return true;
 }
 bool hf_net::compute_global_descriptors(const cv::Mat& img, cv::Mat& globalDescriptors) {
-
-
     assert(mEngine);
-
-    if (!mContext) {
-        mContext = TensorRTUniquePtr<nvinfer1::IExecutionContext>(mEngine->createExecutionContext());
-        if (!mContext) {
-            return false;
-        }
-    }
-    const int input_index = mEngine->getBindingIndex("image:0");
-    mContext->setBindingDimensions(input_index, mInputShape);
-    mpBuffers.reset();
-    mpBuffers = std::make_unique<samplesCommon::BufferManager>(mEngine, 0, mContext.get());
-    input_tensors.clear();
-    input_tensors.emplace_back(mpBuffers->getHostBuffer("image:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("image:0")));
-
-    output_tensors.clear();
-    output_tensors.emplace_back(mpBuffers->getHostBuffer("scores_dense_nms:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("scores_dense_nms:0")));
-    output_tensors.emplace_back(mpBuffers->getHostBuffer("local_descriptor_map:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("local_descriptor_map:0")));
-    output_tensors.emplace_back(mpBuffers->getHostBuffer("global_descriptor:0"), mEngine->getBindingDimensions(mEngine->getBindingIndex("global_descriptor:0")));
-
     // prepare input
     Mat2Tensor(img, input_tensors[0]);
-
-    assert(not input_tensors.empty());
-    assert(not output_tensors.empty());
-
     // infer
     if (!infer()) {
         return false;
@@ -185,9 +169,7 @@ bool hf_net::infer() {
     }
 
     // Memcpy from host input buffers to device input buffers
-    mpBuffers->copyInputToDevice();
-    assert(mpBuffers->getDeviceBindings().data());
-    assert(mContext);
+    mpBuffers->copyInputToDeviceAsync();
     bool status = mContext->executeV2(mpBuffers->getDeviceBindings().data());
     if (!status) {
         spdlog::warn("Failed to execute hf");
