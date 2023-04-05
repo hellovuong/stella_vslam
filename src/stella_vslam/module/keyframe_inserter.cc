@@ -194,7 +194,6 @@ std::shared_ptr<data::keyframe> keyframe_inserter::insert_new_keyframe(data::map
 }
 
 void keyframe_inserter::queue_keyframe(const std::shared_ptr<data::keyframe>& keyfrm) {
-    spdlog::info("queue kf from keyframe inserter");
     mapper_->queue_keyframe(keyfrm);
 }
 
