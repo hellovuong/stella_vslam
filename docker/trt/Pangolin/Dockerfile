@@ -14,7 +14,7 @@ RUN set -x && \
     -DBUILD_EXAMPLES=ON \
     -DDETERMINISTIC:BOOL=ON \
     -DUSE_STACK_TRACE_LOGGER=ON \
-    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_BUILD_TYPE=Release \
     .. && \
   make -j${NUM_THREADS} && \
 
