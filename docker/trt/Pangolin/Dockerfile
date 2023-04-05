@@ -9,6 +9,7 @@ RUN set -x && \
   mkdir -p build && \
   cd build && \
   cmake \
+    -GNinja \
     -DUSE_PANGOLIN_VIEWER=ON \
     -DBUILD_EXAMPLES=ON \
     -DDETERMINISTIC:BOOL=ON \
