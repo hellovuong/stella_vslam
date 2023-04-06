@@ -4,7 +4,7 @@
 #include "stella_vslam/data/landmark.h"
 #include "stella_vslam/data/marker.h"
 #include "stella_vslam/data/map_database.h"
-#include "stella_vslam/data/bow_database.h"
+#include "stella_vslam/data/base_place_recognition.h"
 #include "stella_vslam/data/camera_database.h"
 #include "stella_vslam/data/orb_params_database.h"
 #include "stella_vslam/data/bow_vocabulary.h"
@@ -288,17 +288,6 @@ Vec3_t keyframe::get_trans_cw() const {
     return pose_cw_.block<3, 1>(0, 3);
 }
 
-bool keyframe::bow_is_available() const {
-    return !bow_vec_.empty() && !bow_feat_vec_.empty();
-}
-
-void keyframe::compute_bow(bow_vocabulary* bow_vocab) {
-    bow_vocabulary_util::compute_bow(bow_vocab, frm_obs_.descriptors_, bow_vec_, bow_feat_vec_);
-}
-
-void keyframe::compute_global_desc(hloc::hf_net* hf_net) {
-    hf_net->compute_global_descriptors(img.clone(), frm_obs_.global_descriptors_);
-}
 void keyframe::add_landmark(std::shared_ptr<landmark> lm, const unsigned int idx) {
     std::lock_guard<std::mutex> lock(mtx_observations_);
     landmarks_.at(idx) = std::move(lm);
@@ -525,8 +514,17 @@ void keyframe::prepare_for_erasing(map_database* map_db, base_place_recognition*
 bool keyframe::will_be_erased() {
     return will_be_erased_;
 }
-bool keyframe::global_desc_is_available() const {
-    return (not frm_obs_.global_descriptors_.empty());
+
+bool keyframe::representation_is_available(data::place_recognition_t type) const {
+    if (type == data::place_recognition_type::BoW) {
+        return !bow_vec_.empty() && !bow_feat_vec_.empty();
+    }
+    else if (type == data::place_recognition_type::HF_Net) {
+        return (not frm_obs_.global_descriptors_.empty());
+    }
+    else {
+        return false;
+    }
 }
 
 } // namespace stella_vslam

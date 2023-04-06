@@ -158,5 +158,8 @@ bow_vocabulary* bow_database::getBowVocab() const {
 void bow_database::computeRepresentation(const std::shared_ptr<keyframe>& keyfrm) {
     bow_vocabulary_util::compute_bow(bow_vocab_, keyfrm->frm_obs_.descriptors_, keyfrm->bow_vec_, keyfrm->bow_feat_vec_);
 }
+void bow_database::computeRepresentation(frame& frame, const cv::Mat& img) {
+    bow_vocabulary_util::compute_bow(bow_vocab_, frame.frm_obs_.descriptors_, frame.bow_vec_, frame.bow_feat_vec_);
+}
 
 } // namespace stella_vslam::data

@@ -122,8 +122,6 @@ private:
 
     //! BoW database
     data::base_place_recognition* vpr_db_;
-    //! BoW vocabulary
-    data::bow_vocabulary* bow_vocab_;
 
     //! transform optimizer
     const optimize::transform_optimizer transform_optimizer_;

@@ -1,7 +1,7 @@
 //
 // Created by vuong on 3/18/23.
 //
-
+#include "stella_vslam/data/frame.h"
 #include "stella_vslam/data/keyframe.h"
 #include "stella_vslam/hloc/hf_net.h"
 #include "hf_net_database.h"
@@ -80,5 +80,8 @@ hloc::hf_net* hf_net_database::getHfNet() const {
 }
 void hf_net_database::computeRepresentation(const std::shared_ptr<keyframe>& keyframe) {
     hf_net_->compute_global_descriptors(keyframe->img.clone(), keyframe->frm_obs_.global_descriptors_);
+}
+void hf_net_database::computeRepresentation(frame& frame, const cv::Mat& img) {
+    hf_net_->compute_global_descriptors(img.clone(), frame.frm_obs_.global_descriptors_);
 }
 } // namespace stella_vslam::data

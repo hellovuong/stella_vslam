@@ -53,14 +53,6 @@ Mat33_t frame::get_rot_wc() const {
     return rot_wc_;
 }
 
-bool frame::bow_is_available() const {
-    return !bow_vec_.empty() && !bow_feat_vec_.empty();
-}
-
-void frame::compute_bow(bow_vocabulary* bow_vocab) {
-    bow_vocabulary_util::compute_bow(bow_vocab, frm_obs_.descriptors_, bow_vec_, bow_feat_vec_);
-}
-
 bool frame::can_observe(const std::shared_ptr<landmark>& lm, const float ray_cos_thr,
                         Vec2_t& reproj, float& x_right, unsigned int& pred_scale_level) const {
     const Vec3_t pos_w = lm->get_pos_in_world();
@@ -142,11 +134,16 @@ std::vector<unsigned int> frame::get_keypoints_in_cell(const float ref_x, const 
 Vec3_t frame::triangulate_stereo(const unsigned int idx) const {
     return data::triangulate_stereo(camera_, rot_wc_, trans_wc_, frm_obs_, idx);
 }
-bool frame::global_desc_is_available() const {
-    return (not frm_obs_.global_descriptors_.empty());
-}
-void frame::compute_global_desc(const cv::Mat& img, hloc::hf_net* hf_net) {
-    hf_net->compute_global_descriptors(img.clone(), frm_obs_.global_descriptors_);
+bool frame::representation_is_available(data::place_recognition_t type) const {
+    if (type == data::place_recognition_type::BoW) {
+        return !bow_vec_.empty() && !bow_feat_vec_.empty();
+    }
+    else if (type == data::place_recognition_type::HF_Net) {
+        return (not frm_obs_.global_descriptors_.empty());
+    }
+    else {
+        return false;
+    }
 }
 
 } // namespace stella_vslam

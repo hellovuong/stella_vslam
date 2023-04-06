@@ -201,12 +201,10 @@ bool tracking_module::track(bool relocalization_is_needed) {
     else if (enable_auto_relocalization_) {
         // Compute the BoW representations to perform relocalization
         SPDLOG_TRACE("tracking_module: Compute the representations to perform relocalization (curr_frm_={})", curr_frm_.id_);
-        if (vpr_db_->database_type == data::place_recognition_t::BoW and !curr_frm_.bow_is_available()) {
-            curr_frm_.compute_bow(dynamic_cast<data::bow_database*>(vpr_db_)->getBowVocab());
+        if (!curr_frm_.representation_is_available(vpr_db_->database_type)) {
+            vpr_db_->computeRepresentation(curr_frm_, curr_img_.clone());
         }
-        if (vpr_db_->database_type == data::place_recognition_t::HF_Net and !curr_frm_.global_desc_is_available()) {
-            curr_frm_.compute_global_desc(curr_img_.clone(), dynamic_cast<data::hf_net_database*>(vpr_db_)->getHfNet());
-        }
+
         // try to relocalize
         SPDLOG_TRACE("tracking_module: try to relocalize (curr_frm_={})", curr_frm_.id_);
         succeeded = relocalizer_.relocalize(vpr_db_, curr_frm_);
@@ -287,11 +285,8 @@ bool tracking_module::track_current_frame() {
     }
     if (!succeeded) {
         // Compute the representations to perform the BoW match
-        if (vpr_db_->database_type == data::place_recognition_t::BoW and !curr_frm_.bow_is_available()) {
-            curr_frm_.compute_bow(dynamic_cast<data::bow_database*>(vpr_db_)->getBowVocab());
-        }
-        if (vpr_db_->database_type == data::place_recognition_t::HF_Net and !curr_frm_.global_desc_is_available()) {
-            curr_frm_.compute_global_desc(curr_img_.clone(), dynamic_cast<data::hf_net_database*>(vpr_db_)->getHfNet());
+        if (!curr_frm_.representation_is_available(vpr_db_->database_type)) {
+            vpr_db_->computeRepresentation(curr_frm_, curr_img_.clone());
         }
         succeeded = frame_tracker_.bow_match_based_track(curr_frm_, last_frm_, curr_frm_.ref_keyfrm_);
     }
@@ -306,11 +301,8 @@ bool tracking_module::relocalize_by_pose(const pose_request& request) {
     bool succeeded = false;
     curr_frm_.set_pose_cw(request.pose_cw_);
 
-    if (vpr_db_->database_type == data::place_recognition_t::BoW and !curr_frm_.bow_is_available()) {
-        curr_frm_.compute_bow(dynamic_cast<data::bow_database*>(vpr_db_)->getBowVocab());
-    }
-    if (vpr_db_->database_type == data::place_recognition_t::HF_Net and !curr_frm_.global_desc_is_available()) {
-        curr_frm_.compute_global_desc(curr_img_.clone(), dynamic_cast<data::hf_net_database*>(vpr_db_)->getHfNet());
+    if (!curr_frm_.representation_is_available(vpr_db_->database_type)) {
+        vpr_db_->computeRepresentation(curr_frm_, curr_img_.clone());
     }
     const auto candidates = get_close_keyframes(request);
     for (const auto& candidate : candidates) {

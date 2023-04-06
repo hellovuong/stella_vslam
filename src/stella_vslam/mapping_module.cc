@@ -229,11 +229,8 @@ void mapping_module::mapping_with_new_keyframe() {
 
 void mapping_module::store_new_keyframe() {
     // compute BoW feature vector
-    if (vpr_db_->database_type == data::place_recognition_t::BoW and !cur_keyfrm_->bow_is_available()) {
-        cur_keyfrm_->compute_bow(dynamic_cast<data::bow_database*>(vpr_db_)->getBowVocab());
-    }
-    if (vpr_db_->database_type == data::place_recognition_t::HF_Net and !cur_keyfrm_->global_desc_is_available()) {
-        cur_keyfrm_->compute_global_desc(dynamic_cast<data::hf_net_database*>(vpr_db_)->getHfNet());
+    if (not cur_keyfrm_->representation_is_available(vpr_db_->database_type)) {
+        vpr_db_->computeRepresentation(cur_keyfrm_);
     }
     // Set landmarks into local_map_cleaner to exclude invalid landmarks
     const auto cur_lms = cur_keyfrm_->get_landmarks();

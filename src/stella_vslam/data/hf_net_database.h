@@ -42,6 +42,12 @@ public:
     void computeRepresentation(const std::shared_ptr<keyframe>& keyframe) override;
 
     /**
+     * Compute representation BoW or global desc
+     * @param frame
+     */
+    void computeRepresentation(data::frame& frame, const cv::Mat& img) override;
+
+    /**
      * Clear the database
      */
     void clear() override;

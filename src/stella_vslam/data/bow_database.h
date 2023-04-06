@@ -56,6 +56,12 @@ public:
     void computeRepresentation(const std::shared_ptr<keyframe>& keyfrm) override;
 
     /**
+     * Compute representation BoW or global desc
+     * @param frame
+     */
+    void computeRepresentation(data::frame& frame, const cv::Mat& img) override;
+
+    /**
      * Acquire keyframes over score
      */
     std::vector<std::shared_ptr<keyframe>> acquire_keyframes(const bow_vector& bow_vec, const float min_score = 0.0f,

@@ -14,9 +14,11 @@
 #include <unordered_set>
 #include "bow_vocabulary_fwd.h"
 #include <yaml-cpp/yaml.h>
+#include <opencv2/opencv.hpp>
 
 namespace stella_vslam::data {
 class keyframe;
+class frame;
 enum class place_recognition_type {
     BoW,
     HF_Net
@@ -59,6 +61,12 @@ public:
      * @param keyframe
      */
     virtual void computeRepresentation(const std::shared_ptr<keyframe>& keyframe) = 0;
+
+    /**
+     * Compute representation BoW or global desc
+     * @param frame
+     */
+    virtual void computeRepresentation(data::frame& frame, const cv::Mat& img) = 0;
 
     /**
      * Type of place_recognition_t

@@ -9,6 +9,7 @@
 #include "stella_vslam/data/bow_vocabulary.h"
 #include "stella_vslam/data/marker2d.h"
 #include "stella_vslam/data/bow_vocabulary_fwd.h"
+#include "base_place_recognition.h"
 
 #include <vector>
 #include <atomic>
@@ -120,24 +121,9 @@ public:
     }
 
     /**
-     * Returns true if BoW has been computed.
+     * Returns true if BoW or Global desc has been computed.
      */
-    bool bow_is_available() const;
-
-    /**
-     * Compute BoW representation
-     */
-    void compute_bow(bow_vocabulary* bow_vocab);
-
-    /**
-     * Returns true if global desc has been computed.
-     */
-    bool global_desc_is_available() const;
-
-    /**
-     * Compute global desc representation
-     */
-    void compute_global_desc(const cv::Mat& img, hloc::hf_net* hf_net);
+    bool representation_is_available(data::place_recognition_t type) const;
 
     /**
      * Check observability of the landmark

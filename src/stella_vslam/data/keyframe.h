@@ -5,6 +5,7 @@
 #include "stella_vslam/camera/base.h"
 #include "stella_vslam/feature/orb_params.h"
 #include "stella_vslam/data/graph_node.h"
+#include "stella_vslam/data/base_place_recognition.h"
 #include "stella_vslam/data/bow_vocabulary.h"
 #include "stella_vslam/data/frame_observation.h"
 #include "stella_vslam/data/marker2d.h"
@@ -147,24 +148,9 @@ public:
     // features and observations
 
     /**
-     * Returns true if BoW has been computed.
+     * Returns true if BoW or Global desc has been computed.
      */
-    bool bow_is_available() const;
-
-    /**
-     * Returns true if BoW has been computed.
-     */
-    bool global_desc_is_available() const;
-
-    /**
-     * Compute BoW representation
-     */
-    void compute_bow(bow_vocabulary* bow_vocab);
-
-    /**
-     * Compute BoW representation
-     */
-    void compute_global_desc(hloc::hf_net* hf_net);
+    bool representation_is_available(data::place_recognition_t type) const;
 
     /**
      * Add a landmark observed by myself at keypoint idx
