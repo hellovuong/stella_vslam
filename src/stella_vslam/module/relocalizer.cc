@@ -10,6 +10,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include <memory>
 #include <utility>
 
 namespace stella_vslam::module {
@@ -40,7 +41,7 @@ relocalizer::~relocalizer() {
     spdlog::debug("DESTRUCT: module::relocalizer");
 }
 
-bool relocalizer::relocalize(data::base_place_recognition* vpr_db, data::frame& curr_frm) {
+bool relocalizer::relocalize(data::base_place_recognition* vpr_db, data::frame& curr_frm) const {
     // Acquire relocalization candidates
     std::vector<std::shared_ptr<data::keyframe>> reloc_candidates;
     if (vpr_db->database_type == data::place_recognition_t::BoW) {
@@ -60,7 +61,7 @@ bool relocalizer::relocalize(data::base_place_recognition* vpr_db, data::frame& 
 
 bool relocalizer::reloc_by_candidates(data::frame& curr_frm,
                                       const std::vector<std::shared_ptr<stella_vslam::data::keyframe>>& reloc_candidates,
-                                      bool use_robust_matcher) {
+                                      bool use_robust_matcher) const {
     const auto num_candidates = reloc_candidates.size();
 
     spdlog::debug("Start relocalization. Number of candidate keyframes is {}", num_candidates);
@@ -87,7 +88,7 @@ bool relocalizer::reloc_by_candidates(data::frame& curr_frm,
 
 bool relocalizer::reloc_by_candidate(data::frame& curr_frm,
                                      const std::shared_ptr<stella_vslam::data::keyframe>& candidate_keyfrm,
-                                     bool use_robust_matcher) {
+                                     bool use_robust_matcher) const {
     std::vector<unsigned int> inlier_indices;
     std::vector<std::shared_ptr<data::landmark>> matched_landmarks;
     bool ok = relocalize_by_pnp_solver(curr_frm, candidate_keyfrm, use_robust_matcher, inlier_indices, matched_landmarks);
@@ -131,7 +132,7 @@ bool relocalizer::relocalize_by_pnp_solver(data::frame& curr_frm,
                                            bool use_robust_matcher,
                                            std::vector<unsigned int>& inlier_indices,
                                            std::vector<std::shared_ptr<data::landmark>>& matched_landmarks) const {
-    size_t num_matches = 0;
+    size_t num_matches;
     if (curr_frm.frm_obs_.descriptors_.type() == CV_8U) {
         num_matches = use_robust_matcher ? robust_matcher_.match_frame_and_keyframe(curr_frm, candidate_keyfrm, matched_landmarks)
                                          : bow_matcher_.match_frame_and_keyframe(candidate_keyfrm, curr_frm, matched_landmarks);
@@ -304,7 +305,7 @@ bool relocalizer::refine_pose_by_local_map(data::frame& curr_frm,
             if (curr_frm.can_observe(lm, 0.5, reproj, x_right, pred_scale_level)) {
                 lm_to_reproj[lm->id_] = reproj;
                 lm_to_x_right[lm->id_] = x_right;
-                lm_to_scale[lm->id_] = pred_scale_level;
+                lm_to_scale[lm->id_] = (int)pred_scale_level;
 
                 found_proj_candidate = true;
             }
@@ -316,7 +317,7 @@ bool relocalizer::refine_pose_by_local_map(data::frame& curr_frm,
 
         // acquire more 2D-3D matches by projecting the local landmarks to the current frame
         match::projection projection_matcher(0.8);
-        const float margin = margins[i];
+        const auto margin = (float)margins[i];
         auto num_additional_matches = projection_matcher.match_frame_and_landmarks(curr_frm, local_landmarks, lm_to_reproj, lm_to_x_right, lm_to_scale, margin);
 
         // optimize the pose
@@ -347,11 +348,11 @@ bool relocalizer::refine_pose_by_local_map(data::frame& curr_frm,
     return true;
 }
 
-std::vector<unsigned int> relocalizer::extract_valid_indices(const std::vector<std::shared_ptr<data::landmark>>& landmarks) const {
+std::vector<unsigned int> relocalizer::extract_valid_indices(const std::vector<std::shared_ptr<data::landmark>>& landmarks) {
     std::vector<unsigned int> valid_indices;
     valid_indices.reserve(landmarks.size());
     for (unsigned int idx = 0; idx < landmarks.size(); ++idx) {
-        auto lm = landmarks.at(idx);
+        const auto& lm = landmarks.at(idx);
         if (!lm) {
             continue;
         }
@@ -377,7 +378,7 @@ std::unique_ptr<solve::pnp_solver> relocalizer::setup_pnp_solver(const std::vect
         valid_landmarks.at(i) = valid_assoc_lms.at(i)->get_pos_in_world();
     }
     // Setup PnP solver
-    return std::unique_ptr<solve::pnp_solver>(new solve::pnp_solver(valid_bearings, valid_keypts, valid_landmarks, scale_factors, 10, use_fixed_seed_));
+    return std::make_unique<solve::pnp_solver>(valid_bearings, valid_keypts, valid_landmarks, scale_factors, 10, use_fixed_seed_);
 }
 
 } // namespace stella_vslam::module

@@ -36,15 +36,15 @@ public:
     virtual ~relocalizer();
 
     //! Relocalize the specified frame
-    bool relocalize(data::base_place_recognition* bow_db, data::frame& curr_frm);
+    bool relocalize(data::base_place_recognition* bow_db, data::frame& curr_frm) const;
 
     //! Relocalize the specified frame by given candidates list
     bool reloc_by_candidates(data::frame& curr_frm,
                              const std::vector<std::shared_ptr<stella_vslam::data::keyframe>>& reloc_candidates,
-                             bool use_robust_matcher = false);
+                             bool use_robust_matcher = false) const;
     bool reloc_by_candidate(data::frame& curr_frm,
                             const std::shared_ptr<stella_vslam::data::keyframe>& candidate_keyfrm,
-                            bool use_robust_matcher);
+                            bool use_robust_matcher) const;
     bool relocalize_by_pnp_solver(data::frame& curr_frm,
                                   const std::shared_ptr<stella_vslam::data::keyframe>& candidate_keyfrm,
                                   bool use_robust_matcher,
@@ -61,7 +61,7 @@ public:
 
 private:
     //! Extract valid (non-deleted) landmarks from landmark vector
-    std::vector<unsigned int> extract_valid_indices(const std::vector<std::shared_ptr<data::landmark>>& landmarks) const;
+    static std::vector<unsigned int> extract_valid_indices(const std::vector<std::shared_ptr<data::landmark>>& landmarks) ;
 
     //! Setup PnP solver with the specified 2D-3D matches
     std::unique_ptr<solve::pnp_solver> setup_pnp_solver(const std::vector<unsigned int>& valid_indices,
