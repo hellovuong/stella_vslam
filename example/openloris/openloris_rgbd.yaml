@@ -106,7 +106,6 @@ LoopDetector:
 
 PlaceRecognition:
   type: "HF_Net"
-  bow_voc: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/voc/orb_vocab.fbow" # only use if type is BoW
   image_width: 848
   image_height: 480
   onnx_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/HFNet-RT/HF-Net.onnx"
