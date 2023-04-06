@@ -7,7 +7,6 @@
 #include "stella_vslam/data/landmark.h"
 #include "stella_vslam/data/map_database.h"
 #include "stella_vslam/data/bow_database.h"
-#include "stella_vslam/data/hf_net_database.h"
 #include "stella_vslam/match/projection.h"
 #include "stella_vslam/module/local_map_updater.h"
 #include "stella_vslam/optimize/pose_optimizer_factory.h"
@@ -121,7 +120,7 @@ std::shared_ptr<Mat44_t> tracking_module::feed_frame(data::frame curr_frm) {
 
     curr_frm_ = std::move(curr_frm);
 
-    bool succeeded = false;
+    bool succeeded;
     if (tracking_state_ == tracker_state_t::Initializing) {
         succeeded = initialize();
     }
@@ -527,10 +526,10 @@ void tracking_module::search_local_landmarks() {
     // acquire more 2D-3D matches by projecting the local landmarks to the current frame
     match::projection projection_matcher(0.8);
     const float margin = (curr_frm_.id_ < last_reloc_frm_id_ + 2)
-                             ? 20.0
+                             ? 20.0f
                              : ((camera_->setup_type_ == camera::setup_type_t::RGBD)
-                                    ? 10.0
-                                    : 5.0);
+                                    ? 10.0f
+                                    : 5.0f);
     auto num_matches = projection_matcher.match_frame_and_landmarks(curr_frm_, local_landmarks_, lm_to_reproj, lm_to_x_right, lm_to_scale, margin);
     spdlog::debug("tracking_module::search_local_landmarks(): num of match frame and local landmarks {}", num_matches);
 }
