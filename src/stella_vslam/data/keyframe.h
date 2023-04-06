@@ -36,7 +36,9 @@ class landmark;
 class marker;
 class marker2d;
 class map_database;
+class base_place_recognition;
 class bow_database;
+class hf_net_database;
 class camera_database;
 class orb_params_database;
 
@@ -69,7 +71,7 @@ public:
     static std::shared_ptr<keyframe> from_stmt(sqlite3_stmt* stmt,
                                                camera_database* cam_db,
                                                orb_params_database* orb_params_db,
-                                               bow_vocabulary* bow_vocab,
+                                               base_place_recognition* vpr_db,
                                                unsigned int next_keyframe_id);
 
     // operator overrides
@@ -253,7 +255,7 @@ public:
     /**
      * Erase this keyframe
      */
-    void prepare_for_erasing(map_database* map_db, bow_database* bow_db);
+    void prepare_for_erasing(map_database* map_db,  base_place_recognition* bow_db);
 
     /**
      * Whether this keyframe will be erased shortly or not

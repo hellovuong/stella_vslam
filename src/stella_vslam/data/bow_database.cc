@@ -14,6 +14,9 @@ bow_database::bow_database(bow_vocabulary* bow_vocab)
 
 bow_database::~bow_database() {
     spdlog::debug("DESTRUCT: data::bow_database");
+    clear();
+    delete bow_vocab_;
+    bow_vocab_ = nullptr;
 }
 
 std::vector<std::shared_ptr<keyframe>> bow_database::acquire_keyframes(const bow_vector& bow_vec, const float min_score,
@@ -117,5 +120,43 @@ bow_database::compute_scores(const std::unordered_map<std::shared_ptr<keyframe>,
 
     return scores;
 }
+void bow_database::add_keyframe(const std::shared_ptr<keyframe>& keyfrm) {
+    std::lock_guard<std::mutex> lock(mtx_);
+    // Append keyframe to the corresponding index in keyframes_in_node_ list
+    for (const auto& node_id_and_weight : keyfrm->bow_vec_) {
+        keyfrms_in_node_[node_id_and_weight.first].push_back(keyfrm);
+    }
+}
+void bow_database::erase_keyframe(const std::shared_ptr<keyframe>& keyfrm) {
+    std::lock_guard<std::mutex> lock(mtx_);
+    // Delete keyframe from the corresponding index in keyframes_in_node_ list
+    for (const auto& node_id_and_weight : keyfrm->bow_vec_) {
+        // first: node ID, second: weight
+        if (!static_cast<bool>(keyfrms_in_node_.count(node_id_and_weight.first))) {
+            continue;
+        }
+        // Obtain keyframe which shares word
+        auto& keyfrms_in_node = keyfrms_in_node_.at(node_id_and_weight.first);
 
-} // namespace stella_vslam
+        // std::list::erase only accepts iterator
+        for (auto itr = keyfrms_in_node.begin(), lend = keyfrms_in_node.end(); itr != lend; itr++) {
+            if (keyfrm->id_ == (*itr)->id_) {
+                keyfrms_in_node.erase(itr);
+                break;
+            }
+        }
+    }
+}
+void bow_database::clear() {
+    std::lock_guard<std::mutex> lock(mtx_);
+    keyfrms_in_node_.clear();
+    spdlog::info("clear bow_database");
+}
+bow_vocabulary* bow_database::getBowVocab() const {
+    return bow_vocab_;
+}
+void bow_database::computeRepresentation(const std::shared_ptr<keyframe>& keyfrm) {
+    bow_vocabulary_util::compute_bow(bow_vocab_, keyfrm->frm_obs_.descriptors_, keyfrm->bow_vec_, keyfrm->bow_feat_vec_);
+}
+
+} // namespace stella_vslam::data

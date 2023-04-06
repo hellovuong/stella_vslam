@@ -54,10 +54,9 @@ bool map_database_io_msgpack::load(const std::string& path,
                                    data::camera_database* cam_db,
                                    data::orb_params_database* orb_params_db,
                                    data::map_database* map_db,
-                                   data::bow_database* bow_db,
-                                   data::bow_vocabulary* bow_vocab) {
+                                   data::base_place_recognition* vpr_db) {
     std::lock_guard<std::mutex> lock(data::map_database::mtx_database_);
-    assert(cam_db && orb_params_db && map_db && bow_db && bow_vocab);
+    assert(cam_db && orb_params_db && map_db && vpr_db);
 
     // load binary bytes
 
@@ -90,7 +89,7 @@ bool map_database_io_msgpack::load(const std::string& path,
     orb_params_db->from_json(json_orb_params);
     const auto json_keyfrms = json.at("keyframes");
     const auto json_landmarks = json.at("landmarks");
-    map_db->from_json(cam_db, orb_params_db, bow_vocab, json_keyfrms, json_landmarks);
+    map_db->from_json(cam_db, orb_params_db, vpr_db, json_keyfrms, json_landmarks);
     // load next ID
     map_db->next_keyframe_id_ += json.at("keyframe_next_id").get<unsigned int>();
     map_db->next_landmark_id_ += json.at("landmark_next_id").get<unsigned int>();
@@ -98,7 +97,7 @@ bool map_database_io_msgpack::load(const std::string& path,
     // update bow database
     const auto keyfrms = map_db->get_all_keyframes();
     for (const auto& keyfrm : keyfrms) {
-        bow_db->add_keyframe(keyfrm);
+        vpr_db->add_keyframe(keyfrm);
     }
     return true;
 }

@@ -3,6 +3,7 @@
 #include "stella_vslam/data/landmark.h"
 #include "stella_vslam/data/marker.h"
 #include "stella_vslam/data/map_database.h"
+#include "stella_vslam/data/base_place_recognition.h"
 #include "stella_vslam/initialize/bearing_vector.h"
 #include "stella_vslam/initialize/perspective.h"
 #include "stella_vslam/marker_model/base.h"
@@ -12,12 +13,10 @@
 
 #include <spdlog/spdlog.h>
 
-namespace stella_vslam {
-namespace module {
+namespace stella_vslam::module {
 
-initializer::initializer(data::map_database* map_db, data::bow_database* bow_db,
-                         const YAML::Node& yaml_node)
-    : map_db_(map_db), bow_db_(bow_db),
+initializer::initializer(data::map_database* map_db, const YAML::Node& yaml_node)
+    : map_db_(map_db),
       num_ransac_iters_(yaml_node["num_ransac_iterations"].as<unsigned int>(100)),
       min_num_valid_pts_(yaml_node["min_num_valid_pts"].as<unsigned int>(50)),
       min_num_triangulated_pts_(yaml_node["min_num_triangulated_pts"].as<unsigned int>(50)),
@@ -57,7 +56,7 @@ bool initializer::get_use_fixed_seed() const {
 }
 
 bool initializer::initialize(const camera::setup_type_t setup_type,
-                             data::bow_vocabulary* bow_vocab, data::frame& curr_frm) {
+                             data::base_place_recognition* vpr_db, data::frame& curr_frm) {
     switch (setup_type) {
         case camera::setup_type_t::Monocular: {
             // construct an initializer if not constructed
@@ -73,7 +72,7 @@ bool initializer::initialize(const camera::setup_type_t setup_type,
             }
 
             // create new map if succeeded
-            create_map_for_monocular(bow_vocab, curr_frm);
+            create_map_for_monocular(vpr_db, curr_frm);
             break;
         }
         case camera::setup_type_t::Stereo:
@@ -87,7 +86,7 @@ bool initializer::initialize(const camera::setup_type_t setup_type,
             }
 
             // create new map if succeeded
-            create_map_for_stereo(bow_vocab, curr_frm);
+            create_map_for_stereo(vpr_db, curr_frm);
             break;
         }
         default: {
@@ -161,7 +160,7 @@ bool initializer::try_initialize_for_monocular(data::frame& curr_frm) {
     return initializer_->initialize(curr_frm, init_matches_);
 }
 
-bool initializer::create_map_for_monocular(data::bow_vocabulary* bow_vocab, data::frame& curr_frm, hloc::hf_net* hf_net) {
+bool initializer::create_map_for_monocular(data::base_place_recognition* vpr, data::frame& curr_frm) {
     assert(state_ == initializer_state_t::Initializing);
 
     eigen_alloc_vector<Vec3_t> init_triangulated_pts;
@@ -202,14 +201,8 @@ bool initializer::create_map_for_monocular(data::bow_vocabulary* bow_vocab, data
     map_db_->add_spanning_root(init_keyfrm);
 
     // compute BoW representations
-    init_keyfrm->compute_bow(bow_vocab);
-    curr_keyfrm->compute_bow(bow_vocab);
-
-    // compute global desc
-    if (hf_net) {
-        init_keyfrm->compute_global_desc(hf_net);
-        curr_keyfrm->compute_global_desc(hf_net);
-    }
+    vpr->computeRepresentation(init_keyfrm);
+    vpr->computeRepresentation(curr_keyfrm);
 
     // add the keyframes to the map DB
     map_db_->add_keyframe(init_keyfrm);
@@ -330,7 +323,7 @@ bool initializer::try_initialize_for_stereo(data::frame& curr_frm) {
     return min_num_triangulated_pts_ <= num_valid_depths;
 }
 
-bool initializer::create_map_for_stereo(data::bow_vocabulary* bow_vocab, data::frame& curr_frm, hloc::hf_net* hf_net) {
+bool initializer::create_map_for_stereo(data::base_place_recognition* vpr, data::frame& curr_frm) {
     assert(state_ == initializer_state_t::Initializing);
 
     // create an initial keyframe
@@ -340,12 +333,7 @@ bool initializer::create_map_for_stereo(data::bow_vocabulary* bow_vocab, data::f
     map_db_->add_spanning_root(curr_keyfrm);
 
     // compute BoW representation
-    curr_keyfrm->compute_bow(bow_vocab);
-
-    if (hf_net) {
-        curr_keyfrm->compute_global_desc(hf_net);
-    }
-
+    vpr->computeRepresentation(curr_keyfrm);
     // add to the map DB
     map_db_->add_keyframe(curr_keyfrm);
 
@@ -384,5 +372,4 @@ bool initializer::create_map_for_stereo(data::bow_vocabulary* bow_vocab, data::f
     return true;
 }
 
-} // namespace module
 } // namespace stella_vslam

@@ -12,6 +12,6 @@ feature_type_t base_extractor::load_feature_type(const YAML::Node& yaml_node) {
     else if (feature_type_str == "SuperPoint") {
         return feature_type_t::SuperPoint;
     }
-    throw std::runtime_error("Invalid camera model: " + feature_type_str + ". Support: ORB, SuperPoint");
+    throw std::runtime_error("Invalid feature type: " + feature_type_str + ". Support: ORB, SuperPoint");
 }
 } // namespace stella_vslam::feature

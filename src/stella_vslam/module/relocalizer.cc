@@ -2,6 +2,7 @@
 #include "stella_vslam/data/keyframe.h"
 #include "stella_vslam/data/landmark.h"
 #include "stella_vslam/data/bow_database.h"
+#include "stella_vslam/data/hf_net_database.h"
 #include "stella_vslam/module/local_map_updater.h"
 #include "stella_vslam/module/relocalizer.h"
 #include "stella_vslam/optimize/pose_optimizer_g2o.h"
@@ -9,18 +10,19 @@
 
 #include <spdlog/spdlog.h>
 
-namespace stella_vslam {
-namespace module {
+#include <utility>
 
-relocalizer::relocalizer(const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer,
+namespace stella_vslam::module {
+
+relocalizer::relocalizer(std::shared_ptr<optimize::pose_optimizer> pose_optimizer,
                          const double bow_match_lowe_ratio, const double proj_match_lowe_ratio,
                          const double robust_match_lowe_ratio,
                          const unsigned int min_num_bow_matches, const unsigned int min_num_valid_obs,
                          const bool use_fixed_seed)
     : min_num_bow_matches_(min_num_bow_matches), min_num_valid_obs_(min_num_valid_obs),
-      bow_matcher_(bow_match_lowe_ratio, false), proj_matcher_(proj_match_lowe_ratio, false),
-      robust_matcher_(robust_match_lowe_ratio, false),
-      pose_optimizer_(pose_optimizer), use_fixed_seed_(use_fixed_seed) {
+      bow_matcher_((float)bow_match_lowe_ratio, false), proj_matcher_((float)proj_match_lowe_ratio, false),
+      robust_matcher_((float)robust_match_lowe_ratio, false),
+      pose_optimizer_(std::move(pose_optimizer)), use_fixed_seed_(use_fixed_seed) {
     spdlog::debug("CONSTRUCT: module::relocalizer");
 }
 
@@ -38,9 +40,16 @@ relocalizer::~relocalizer() {
     spdlog::debug("DESTRUCT: module::relocalizer");
 }
 
-bool relocalizer::relocalize(data::bow_database* bow_db, data::frame& curr_frm) {
+bool relocalizer::relocalize(data::base_place_recognition* vpr_db, data::frame& curr_frm) {
     // Acquire relocalization candidates
-    const auto reloc_candidates = bow_db->acquire_keyframes(curr_frm.bow_vec_);
+    std::vector<std::shared_ptr<data::keyframe>> reloc_candidates;
+    if (vpr_db->database_type == data::place_recognition_t::BoW) {
+        reloc_candidates = dynamic_cast<data::bow_database*>(vpr_db)->acquire_keyframes(curr_frm.bow_vec_);
+    }
+    else if (vpr_db->database_type == data::place_recognition_t::HF_Net) {
+        reloc_candidates = dynamic_cast<data::hf_net_database*>(vpr_db)->acquire_keyframes(curr_frm.frm_obs_.global_descriptors_.clone());
+    }
+
     if (reloc_candidates.empty()) {
         spdlog::debug("relocalizer::relocalize: Empty reloc candidates");
         return false;
@@ -371,5 +380,4 @@ std::unique_ptr<solve::pnp_solver> relocalizer::setup_pnp_solver(const std::vect
     return std::unique_ptr<solve::pnp_solver>(new solve::pnp_solver(valid_bearings, valid_keypts, valid_landmarks, scale_factors, 10, use_fixed_seed_));
 }
 
-} // namespace module
-} // namespace stella_vslam
+} // namespace stella_vslam::module

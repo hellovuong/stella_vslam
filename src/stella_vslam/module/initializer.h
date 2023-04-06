@@ -18,6 +18,7 @@ class hf_net;
 namespace data {
 class frame;
 class map_database;
+class base_place_recognition;
 class bow_database;
 } // namespace data
 
@@ -36,8 +37,7 @@ public:
     initializer() = delete;
 
     //! Constructor
-    initializer(data::map_database* map_db, data::bow_database* bow_db,
-                const YAML::Node& yaml_node);
+    initializer(data::map_database* map_db, const YAML::Node& yaml_node);
 
     //! Destructor
     ~initializer();
@@ -58,14 +58,12 @@ public:
     bool get_use_fixed_seed() const;
 
     //! Initialize with the current frame
-    bool initialize(const camera::setup_type_t setup_type,
-                    data::bow_vocabulary* bow_vocab, data::frame& curr_frm);
+    bool initialize(camera::setup_type_t setup_type,
+                    data::base_place_recognition* vpr, data::frame& curr_frm);
 
 private:
     //! map database
     data::map_database* map_db_ = nullptr;
-    //! BoW database
-    data::bow_database* bow_db_ = nullptr;
     //! initializer status
     initializer_state_t state_ = initializer_state_t::NotReady;
 
@@ -104,10 +102,10 @@ private:
     bool try_initialize_for_monocular(data::frame& curr_frm);
 
     //! Create an initial map with monocular camera setup
-    bool create_map_for_monocular(data::bow_vocabulary* bow_vocab, data::frame& curr_frm, hloc::hf_net* hf_net = nullptr);
+    bool create_map_for_monocular(data::base_place_recognition* vpr, data::frame& curr_frm);
 
     //! Scaling up or down a initial map
-    void scale_map(const std::shared_ptr<data::keyframe>& init_keyfrm, const std::shared_ptr<data::keyframe>& curr_keyfrm, const double scale);
+    void scale_map(const std::shared_ptr<data::keyframe>& init_keyfrm, const std::shared_ptr<data::keyframe>& curr_keyfrm, double scale);
 
     //! initializer for monocular
     std::unique_ptr<initialize::base> initializer_ = nullptr;
@@ -125,7 +123,7 @@ private:
     bool try_initialize_for_stereo(data::frame& curr_frm);
 
     //! Create an initial map with stereo or RGBD camera setup
-    bool create_map_for_stereo(data::bow_vocabulary* bow_vocab, data::frame& curr_frm, hloc::hf_net* hf_net = nullptr);
+    bool create_map_for_stereo(data::base_place_recognition* vpr, data::frame& curr_frm);
 };
 
 } // namespace module

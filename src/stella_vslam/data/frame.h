@@ -28,6 +28,10 @@ class orb_extractor;
 struct orb_params;
 } // namespace feature
 
+namespace hloc {
+class hf_net;
+}
+
 namespace data {
 
 class keyframe;
@@ -124,6 +128,16 @@ public:
      * Compute BoW representation
      */
     void compute_bow(bow_vocabulary* bow_vocab);
+
+    /**
+     * Returns true if global desc has been computed.
+     */
+    bool global_desc_is_available() const;
+
+    /**
+     * Compute global desc representation
+     */
+    void compute_global_desc(const cv::Mat& img, hloc::hf_net* hf_net);
 
     /**
      * Check observability of the landmark

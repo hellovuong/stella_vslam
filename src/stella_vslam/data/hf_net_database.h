@@ -9,6 +9,7 @@
 #include <Eigen/Core>
 
 #include "stella_vslam/data/base_place_recognition.h"
+#include "stella_vslam/hloc/hf_net.h"
 
 namespace stella_vslam::data {
 
@@ -17,13 +18,33 @@ public:
     /**
      * Constructor
      */
-    explicit hf_net_database()
-        : base_place_recognition(place_recognition_type::HF_Net){};
+    explicit hf_net_database(hloc::hf_net* hfNet)
+        : base_place_recognition(place_recognition_type::HF_Net),
+          hf_net_(hfNet){};
 
     /**
      * Destructor
      */
-    ~hf_net_database();
+    ~hf_net_database() override;
+
+    /**
+     * Add a keyframe to the database
+     * @param keyfrm
+     */
+    void add_keyframe(const std::shared_ptr<keyframe>& keyfrm) override;
+
+    /**
+     * Erase the keyframe from the database
+     * @param keyfrm
+     */
+    void erase_keyframe(const std::shared_ptr<keyframe>& keyfrm) override;
+
+    void computeRepresentation(const std::shared_ptr<keyframe>& keyframe) override;
+
+    /**
+     * Clear the database
+     */
+    void clear() override;
 
     /**
      * Acquire keyframes over score
@@ -33,8 +54,16 @@ public:
      * @return
      */
     std::vector<std::shared_ptr<keyframe>> acquire_keyframes(const cv::Mat& global_desc,
-                                                             float min_score,
+                                                             float min_score = 0.0f,
                                                              const std::set<std::shared_ptr<keyframe>>& keyfrms_to_reject = {});
+    /**
+     * Compute score between 2 desc(s)
+     * @param global_desc_1
+     * @param global_desc_2
+     * @return
+     */
+    static float compute_score(const cv::Mat& global_desc_1, const cv::Mat& global_desc_2);
+    hloc::hf_net* getHfNet() const;
 
 protected:
     /**
@@ -46,6 +75,12 @@ protected:
      */
     std::unordered_map<std::shared_ptr<keyframe>, float>
     compute_scores(const cv::Mat& global_desc, float min_score, float& best_score) const;
+
+private:
+    //! hf_net
+    hloc::hf_net* hf_net_ = nullptr;
+    //! hf database
+    std::unordered_set<std::shared_ptr<keyframe>> keyfrms{};
 };
 
 } // namespace stella_vslam::data

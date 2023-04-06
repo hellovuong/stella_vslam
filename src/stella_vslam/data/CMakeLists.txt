@@ -16,6 +16,7 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/bow_database.h
                ${CMAKE_CURRENT_SOURCE_DIR}/frame_statistics.h
                ${CMAKE_CURRENT_SOURCE_DIR}/base_place_recognition.h
+               ${CMAKE_CURRENT_SOURCE_DIR}/base_place_recognition_factory.h
                ${CMAKE_CURRENT_SOURCE_DIR}/hf_net_database.h
                ${CMAKE_CURRENT_SOURCE_DIR}/bow_vocabulary.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/common.cc

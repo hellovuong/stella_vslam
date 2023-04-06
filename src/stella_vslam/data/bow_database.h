@@ -28,7 +28,32 @@ public:
     /**
      * Destructor
      */
-    ~bow_database();
+    ~bow_database() override;
+
+    /**
+     * Add a keyframe to the database
+     * @param keyfrm
+     */
+    void add_keyframe(const std::shared_ptr<keyframe>& keyfrm) override;
+
+    /**
+     * Erase the keyframe from the database
+     * @param keyfrm
+     */
+    void erase_keyframe(const std::shared_ptr<keyframe>& keyfrm) override;
+
+    /**
+     * Clear the database
+     */
+    void clear() override;
+
+    bow_vocabulary* getBowVocab() const;
+
+    /**
+     *
+     * @param keyfrm [in,out]
+     */
+    void computeRepresentation(const std::shared_ptr<keyframe>& keyfrm) override;
 
     /**
      * Acquire keyframes over score
@@ -62,9 +87,11 @@ protected:
                    const float min_score,
                    float& best_score) const;
 
+    //! BoW database
+    std::unordered_map<unsigned int, std::list<std::shared_ptr<keyframe>>> keyfrms_in_node_{};
+
     //-----------------------------------------
     // BoW vocabulary
-
     //! BoW vocabulary
     bow_vocabulary* bow_vocab_;
 };

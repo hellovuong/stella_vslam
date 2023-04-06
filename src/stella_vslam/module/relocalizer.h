@@ -14,7 +14,9 @@ namespace stella_vslam {
 
 namespace data {
 class frame;
+class base_place_recognition;
 class bow_database;
+class hf_net_database;
 } // namespace data
 
 namespace module {
@@ -22,7 +24,7 @@ namespace module {
 class relocalizer {
 public:
     //! Constructor
-    explicit relocalizer(const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer,
+    explicit relocalizer(std::shared_ptr<optimize::pose_optimizer>  pose_optimizer,
                          const double bow_match_lowe_ratio = 0.75, const double proj_match_lowe_ratio = 0.9,
                          const double robust_match_lowe_ratio = 0.8,
                          const unsigned int min_num_bow_matches = 20, const unsigned int min_num_valid_obs = 50,
@@ -34,7 +36,7 @@ public:
     virtual ~relocalizer();
 
     //! Relocalize the specified frame
-    bool relocalize(data::bow_database* bow_db, data::frame& curr_frm);
+    bool relocalize(data::base_place_recognition* bow_db, data::frame& curr_frm);
 
     //! Relocalize the specified frame by given candidates list
     bool reloc_by_candidates(data::frame& curr_frm,

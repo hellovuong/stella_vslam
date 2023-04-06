@@ -9,6 +9,7 @@
 #include "stella_vslam/data/frame_observation.h"
 #include "stella_vslam/data/orb_params_database.h"
 #include "stella_vslam/data/map_database.h"
+#include "stella_vslam/data/base_place_recognition_factory.h"
 #include "stella_vslam/data/bow_database.h"
 #include "stella_vslam/data/bow_vocabulary.h"
 #include "stella_vslam/data/marker2d.h"
@@ -37,10 +38,6 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     spdlog::debug("CONSTRUCT: system");
     print_info();
 
-    // load ORB vocabulary
-    spdlog::info("loading ORB vocabulary: {}", vocab_file_path);
-    bow_vocab_ = data::bow_vocabulary_util::load(vocab_file_path);
-
     const auto system_params = util::yaml_optional_ref(cfg->yaml_node_, "System");
 
     camera_ = camera::camera_factory::create(util::yaml_optional_ref(cfg->yaml_node_, "Camera"));
@@ -57,9 +54,8 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     cam_db_ = new data::camera_database();
     cam_db_->add_camera(camera_);
     map_db_ = new data::map_database(system_params["min_num_shared_lms"].as<unsigned int>(15));
-    bow_db_ = new data::bow_database(bow_vocab_);
 
-    hf_net_ = new hloc::hf_net(util::gen_hf_params(cfg->yaml_node_["LoopDetector"]));
+    vpr_db_ = data::base_place_recognition_factory::create(cfg->yaml_node_["PlaceRecognition"]);
 
     // frame and map publisher
     frame_publisher_ = std::make_shared<publish::frame_publisher>(cfg_, map_db_);
@@ -70,11 +66,11 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     map_database_io_ = io::map_database_io_factory::create(map_format);
 
     // tracking module
-    tracker_ = new tracking_module(cfg_, camera_, map_db_, bow_vocab_, bow_db_);
+    tracker_ = new tracking_module(cfg_, camera_, map_db_, vpr_db_);
     // mapping module
-    mapper_ = new mapping_module(cfg_->yaml_node_["Mapping"], map_db_, bow_db_, bow_vocab_);
+    mapper_ = new mapping_module(cfg_->yaml_node_["Mapping"], map_db_, vpr_db_);
     // global optimization module
-    global_optimizer_ = new global_optimization_module(map_db_, bow_db_, bow_vocab_, cfg_->yaml_node_,
+    global_optimizer_ = new global_optimization_module(map_db_, vpr_db_, cfg_->yaml_node_,
                                                        camera_->setup_type_ != camera::setup_type_t::Monocular);
 
     // preprocessing modules
@@ -105,7 +101,6 @@ system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file
     tracker_->set_global_optimization_module(global_optimizer_);
     mapper_->set_tracking_module(tracker_);
     mapper_->set_global_optimization_module(global_optimizer_);
-    mapper_->setHfNet(hf_net_);
     global_optimizer_->set_tracking_module(tracker_);
     global_optimizer_->set_mapping_module(mapper_);
 }
@@ -122,22 +117,17 @@ system::~system() {
     delete tracker_;
     tracker_ = nullptr;
 
-    delete bow_db_;
-    bow_db_ = nullptr;
+    delete vpr_db_;
+    vpr_db_ = nullptr;
     delete map_db_;
     map_db_ = nullptr;
     delete cam_db_;
     cam_db_ = nullptr;
-    delete bow_vocab_;
-    bow_vocab_ = nullptr;
 
     delete extractor_left_;
     extractor_left_ = nullptr;
     delete extractor_right_;
     extractor_right_ = nullptr;
-
-    delete hf_net_;
-    hf_net_ = nullptr;
 
     delete marker_detector_;
     marker_detector_ = nullptr;
@@ -214,9 +204,10 @@ void system::save_keyframe_trajectory(const std::string& path, const std::string
 bool system::load_map_database(const std::string& path) const {
     pause_other_threads();
     spdlog::debug("load_map_database: {}", path);
-    bool ok = map_database_io_->load(path, cam_db_, orb_params_db_, map_db_, bow_db_, bow_vocab_);
+
+//    bool ok = map_database_io_->load(path, cam_db_, orb_params_db_, map_db_, bow_db_, bow_vocab_);
     resume_other_threads();
-    return ok;
+    return false;
 }
 
 bool system::save_map_database(const std::string& path) const {

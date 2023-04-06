@@ -4,7 +4,9 @@
 #include "stella_vslam/data/keyframe.h"
 #include "stella_vslam/data/landmark.h"
 #include "stella_vslam/data/map_database.h"
+#include "stella_vslam/data/base_place_recognition.h"
 #include "stella_vslam/match/fuse.h"
+#include "stella_vslam/module/loop_detector.h"
 #include "stella_vslam/util/converter.h"
 #include "stella_vslam/util/yaml.h"
 
@@ -12,10 +14,9 @@
 
 namespace stella_vslam {
 
-global_optimization_module::global_optimization_module(data::map_database* map_db, data::bow_database* bow_db,
-                                                       data::bow_vocabulary* bow_vocab, const YAML::Node& yaml_node,
-                                                       const bool fix_scale)
-    : loop_detector_(new module::loop_detector(bow_db, bow_vocab, util::yaml_optional_ref(yaml_node, "LoopDetector"), fix_scale)),
+global_optimization_module::global_optimization_module(data::map_database* map_db, data::base_place_recognition* vpr_db,
+                                                       const YAML::Node& yaml_node, const bool fix_scale)
+    : loop_detector_(new module::loop_detector(vpr_db, util::yaml_optional_ref(yaml_node, "LoopDetector"), fix_scale)),
       loop_bundle_adjuster_(new module::loop_bundle_adjuster(map_db)),
       map_db_(map_db),
       graph_optimizer_(new optimize::graph_optimizer(fix_scale)) {

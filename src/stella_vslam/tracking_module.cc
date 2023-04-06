@@ -7,6 +7,7 @@
 #include "stella_vslam/data/landmark.h"
 #include "stella_vslam/data/map_database.h"
 #include "stella_vslam/data/bow_database.h"
+#include "stella_vslam/data/hf_net_database.h"
 #include "stella_vslam/match/projection.h"
 #include "stella_vslam/module/local_map_updater.h"
 #include "stella_vslam/optimize/pose_optimizer_factory.h"
@@ -14,21 +15,21 @@
 
 #include <chrono>
 #include <unordered_map>
+#include <utility>
 
 #include <spdlog/spdlog.h>
 
 namespace stella_vslam {
 
-tracking_module::tracking_module(const std::shared_ptr<config>& cfg, camera::base* camera, data::map_database* map_db,
-                                 data::bow_vocabulary* bow_vocab, data::bow_database* bow_db)
+tracking_module::tracking_module(const std::shared_ptr<config>& cfg, camera::base* camera, data::map_database* map_db, data::base_place_recognition* vpr_db)
     : camera_(camera),
       reloc_distance_threshold_(util::yaml_optional_ref(cfg->yaml_node_, "Tracking")["reloc_distance_threshold"].as<double>(0.2)),
       reloc_angle_threshold_(util::yaml_optional_ref(cfg->yaml_node_, "Tracking")["reloc_angle_threshold"].as<double>(0.45)),
       enable_auto_relocalization_(util::yaml_optional_ref(cfg->yaml_node_, "Tracking")["enable_auto_relocalization"].as<bool>(true)),
       use_robust_matcher_for_relocalization_request_(util::yaml_optional_ref(cfg->yaml_node_, "Tracking")["use_robust_matcher_for_relocalization_request"].as<bool>(false)),
       max_num_local_keyfrms_(util::yaml_optional_ref(cfg->yaml_node_, "Tracking")["max_num_local_keyfrms"].as<unsigned int>(60)),
-      map_db_(map_db), bow_vocab_(bow_vocab), bow_db_(bow_db),
-      initializer_(map_db, bow_db, util::yaml_optional_ref(cfg->yaml_node_, "Initializer")),
+      map_db_(map_db), vpr_db_(vpr_db),
+      initializer_(map_db, util::yaml_optional_ref(cfg->yaml_node_, "Initializer")),
       pose_optimizer_(optimize::pose_optimizer_factory::create(util::yaml_optional_ref(cfg->yaml_node_, "Tracking"))),
       frame_tracker_(camera_, pose_optimizer_, 10, initializer_.get_use_fixed_seed()),
       relocalizer_(pose_optimizer_, util::yaml_optional_ref(cfg->yaml_node_, "Relocalizer")),
@@ -100,7 +101,7 @@ void tracking_module::reset() {
     future_mapper_reset.get();
     future_global_optimizer_reset.get();
 
-    bow_db_->clear();
+    vpr_db_->clear();
     map_db_->clear();
 
     data::frame::next_id_ = 0;
@@ -118,7 +119,7 @@ std::shared_ptr<Mat44_t> tracking_module::feed_frame(data::frame curr_frm) {
         std::this_thread::sleep_for(std::chrono::microseconds(5000));
     }
 
-    curr_frm_ = curr_frm;
+    curr_frm_ = std::move(curr_frm);
 
     bool succeeded = false;
     if (tracking_state_ == tracker_state_t::Initializing) {
@@ -199,20 +200,23 @@ bool tracking_module::track(bool relocalization_is_needed) {
     }
     else if (enable_auto_relocalization_) {
         // Compute the BoW representations to perform relocalization
-        SPDLOG_TRACE("tracking_module: Compute the BoW representations to perform relocalization (curr_frm_={})", curr_frm_.id_);
-        if (!curr_frm_.bow_is_available()) {
-            curr_frm_.compute_bow(bow_vocab_);
+        SPDLOG_TRACE("tracking_module: Compute the representations to perform relocalization (curr_frm_={})", curr_frm_.id_);
+        if (vpr_db_->database_type == data::place_recognition_t::BoW and !curr_frm_.bow_is_available()) {
+            curr_frm_.compute_bow(dynamic_cast<data::bow_database*>(vpr_db_)->getBowVocab());
+        }
+        if (vpr_db_->database_type == data::place_recognition_t::HF_Net and !curr_frm_.global_desc_is_available()) {
+            curr_frm_.compute_global_desc(curr_img_.clone(), dynamic_cast<data::hf_net_database*>(vpr_db_)->getHfNet());
         }
         // try to relocalize
         SPDLOG_TRACE("tracking_module: try to relocalize (curr_frm_={})", curr_frm_.id_);
-        succeeded = relocalizer_.relocalize(bow_db_, curr_frm_);
+        succeeded = relocalizer_.relocalize(vpr_db_, curr_frm_);
         if (succeeded) {
             last_reloc_frm_id_ = curr_frm_.id_;
             last_reloc_frm_timestamp_ = curr_frm_.timestamp_;
         }
     }
 
-    // update the local map and optimize the camera pose of the current frames_thr);
+    // update the local map and optimize the camera pose of the current (frames_thr);
     const unsigned int min_num_obs_thr = (3 <= map_db_->get_num_keyframes()) ? 3 : 2;
     unsigned int num_tracked_lms = 0;
     unsigned int num_reliable_lms = 0;
@@ -248,7 +252,7 @@ bool tracking_module::initialize() {
     std::lock_guard<std::mutex> lock2(mtx_stop_keyframe_insertion_);
 
     // try to initialize with the current frame
-    initializer_.initialize(camera_->setup_type_, bow_vocab_, curr_frm_);
+    initializer_.initialize(camera_->setup_type_, vpr_db_, curr_frm_);
 
     // if map building was failed -> reset the map database
     if (initializer_.get_state() == module::initializer_state_t::Wrong) {
@@ -282,9 +286,12 @@ bool tracking_module::track_current_frame() {
         succeeded = frame_tracker_.motion_based_track(curr_frm_, last_frm_, twist_);
     }
     if (!succeeded) {
-        // Compute the BoW representations to perform the BoW match
-        if (!curr_frm_.bow_is_available()) {
-            curr_frm_.compute_bow(bow_vocab_);
+        // Compute the representations to perform the BoW match
+        if (vpr_db_->database_type == data::place_recognition_t::BoW and !curr_frm_.bow_is_available()) {
+            curr_frm_.compute_bow(dynamic_cast<data::bow_database*>(vpr_db_)->getBowVocab());
+        }
+        if (vpr_db_->database_type == data::place_recognition_t::HF_Net and !curr_frm_.global_desc_is_available()) {
+            curr_frm_.compute_global_desc(curr_img_.clone(), dynamic_cast<data::hf_net_database*>(vpr_db_)->getHfNet());
         }
         succeeded = frame_tracker_.bow_match_based_track(curr_frm_, last_frm_, curr_frm_.ref_keyfrm_);
     }
@@ -299,8 +306,11 @@ bool tracking_module::relocalize_by_pose(const pose_request& request) {
     bool succeeded = false;
     curr_frm_.set_pose_cw(request.pose_cw_);
 
-    if (!curr_frm_.bow_is_available()) {
-        curr_frm_.compute_bow(bow_vocab_);
+    if (vpr_db_->database_type == data::place_recognition_t::BoW and !curr_frm_.bow_is_available()) {
+        curr_frm_.compute_bow(dynamic_cast<data::bow_database*>(vpr_db_)->getBowVocab());
+    }
+    if (vpr_db_->database_type == data::place_recognition_t::HF_Net and !curr_frm_.global_desc_is_available()) {
+        curr_frm_.compute_global_desc(curr_img_.clone(), dynamic_cast<data::hf_net_database*>(vpr_db_)->getHfNet());
     }
     const auto candidates = get_close_keyframes(request);
     for (const auto& candidate : candidates) {
@@ -509,7 +519,7 @@ void tracking_module::search_local_landmarks() {
         if (curr_frm_.can_observe(lm, 0.5, reproj, x_right, pred_scale_level)) {
             lm_to_reproj[lm->id_] = reproj;
             lm_to_x_right[lm->id_] = x_right;
-            lm_to_scale[lm->id_] = pred_scale_level;
+            lm_to_scale[lm->id_] = (int)pred_scale_level;
 
             // this landmark is observable from the current frame
             lm->increase_num_observable();

@@ -45,8 +45,7 @@ public:
               data::camera_database* cam_db,
               data::orb_params_database* orb_params_db,
               data::map_database* map_db,
-              data::bow_database* bow_db,
-              data::bow_vocabulary* bow_vocab) override;
+              data::base_place_recognition* vpr) override;
 
 private:
     bool save_stats(sqlite3* db, const data::map_database* map_db) const;

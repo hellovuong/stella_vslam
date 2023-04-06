@@ -23,8 +23,14 @@ class global_optimization_module;
 
 namespace data {
 class map_database;
+class base_place_recognition;
 class bow_database;
+class hf_net_database;
 } // namespace data
+
+namespace hloc {
+class hf_net;
+}
 
 // tracker state
 enum class tracker_state_t {
@@ -46,8 +52,7 @@ public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     //! Constructor
-    tracking_module(const std::shared_ptr<config>& cfg, camera::base* camera, data::map_database* map_db,
-                    data::bow_vocabulary* bow_vocab, data::bow_database* bow_db);
+    tracking_module(const std::shared_ptr<config>& cfg, camera::base* camera, data::map_database* map_db, data::base_place_recognition* vpr);
 
     //! Destructor
     ~tracking_module();
@@ -185,11 +190,8 @@ protected:
     //! map_database
     data::map_database* map_db_ = nullptr;
 
-    // Bag of Words
-    //! BoW vocabulary
-    data::bow_vocabulary* bow_vocab_ = nullptr;
-    //! BoW database
-    data::bow_database* bow_db_ = nullptr;
+    //! vpr database
+    data::base_place_recognition* vpr_db_ = nullptr;
 
     //! initializer
     module::initializer initializer_;

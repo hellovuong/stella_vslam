@@ -30,6 +30,8 @@ class frame;
 class camera_database;
 class orb_params_database;
 class map_database;
+class base_place_recognition;
+class hf_net_database;
 class bow_database;
 } // namespace data
 
@@ -219,11 +221,8 @@ private:
     //! map database
     data::map_database* map_db_ = nullptr;
 
-    //! BoW vocabulary
-    data::bow_vocabulary* bow_vocab_ = nullptr;
-
-    //! BoW database
-    data::bow_database* bow_db_ = nullptr;
+    //! place recognition database
+    data::base_place_recognition* vpr_db_ = nullptr;
 
     //! tracker
     tracking_module* tracker_ = nullptr;
@@ -237,8 +236,6 @@ private:
     global_optimization_module* global_optimizer_ = nullptr;
     //! global optimization thread
     std::unique_ptr<std::thread> global_optimization_thread_ = nullptr;
-    //! hf_net
-    hloc::hf_net* hf_net_ = nullptr;
 
     // ORB extractors
     //! ORB extractor for left/monocular image

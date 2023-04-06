@@ -1,13 +1,13 @@
 #include "stella_vslam/data/keyframe.h"
 #include "stella_vslam/data/landmark.h"
 #include "stella_vslam/data/map_database.h"
+#include "stella_vslam/data/base_place_recognition.h"
 #include "stella_vslam/module/local_map_cleaner.h"
 
-namespace stella_vslam {
-namespace module {
+namespace stella_vslam::module {
 
-local_map_cleaner::local_map_cleaner(const YAML::Node& yaml_node, data::map_database* map_db, data::bow_database* bow_db)
-    : map_db_(map_db), bow_db_(bow_db),
+local_map_cleaner::local_map_cleaner(const YAML::Node& yaml_node, data::map_database* map_db, data::base_place_recognition* vpr_db)
+    : map_db_(map_db), vpr_db_(vpr_db),
       redundant_obs_ratio_thr_(yaml_node["redundant_obs_ratio_thr"].as<double>(0.9)),
       observed_ratio_thr_(yaml_node["observed_ratio_thr"].as<double>(0.3)),
       num_reliable_keyfrms_(yaml_node["num_reliable_keyfrms"].as<unsigned int>(2)),
@@ -99,7 +99,7 @@ unsigned int local_map_cleaner::remove_redundant_keyframes(const std::shared_ptr
         if (redundant_obs_ratio_thr_ <= static_cast<float>(num_redundant_obs) / num_valid_obs) {
             ++num_removed;
             const auto cur_landmarks = covisibility->get_landmarks();
-            covisibility->prepare_for_erasing(map_db_, bow_db_);
+            covisibility->prepare_for_erasing(map_db_, vpr_db_);
             for (const auto& lm : cur_landmarks) {
                 if (!lm) {
                     continue;
@@ -192,5 +192,4 @@ void local_map_cleaner::count_redundant_observations(const std::shared_ptr<data:
     }
 }
 
-} // namespace module
 } // namespace stella_vslam

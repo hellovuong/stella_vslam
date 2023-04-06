@@ -4,13 +4,12 @@
 #include "stella_vslam/data/landmark.h"
 #include "stella_vslam/feature/orb_extractor.h"
 #include "stella_vslam/match/stereo.h"
-
+#include "stella_vslam/hloc/hf_net.h"
 #include <thread>
 
 #include <spdlog/spdlog.h>
 
-namespace stella_vslam {
-namespace data {
+namespace stella_vslam::data {
 
 std::atomic<unsigned int> frame::next_id_{0};
 
@@ -143,6 +142,11 @@ std::vector<unsigned int> frame::get_keypoints_in_cell(const float ref_x, const 
 Vec3_t frame::triangulate_stereo(const unsigned int idx) const {
     return data::triangulate_stereo(camera_, rot_wc_, trans_wc_, frm_obs_, idx);
 }
+bool frame::global_desc_is_available() const {
+    return (not frm_obs_.global_descriptors_.empty());
+}
+void frame::compute_global_desc(const cv::Mat& img, hloc::hf_net* hf_net) {
+    hf_net->compute_global_descriptors(img.clone(), frm_obs_.global_descriptors_);
+}
 
-} // namespace data
 } // namespace stella_vslam

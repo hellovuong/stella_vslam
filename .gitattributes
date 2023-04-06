@@ -1,0 +1,2 @@
+data/trt/models/HFNet-RT/* filter=lfs diff=lfs merge=lfs -text
+data/trt/models/HFNet-RT filter=lfs diff=lfs merge=lfs -text

@@ -1,3 +1,5 @@
+#include "stella_vslam/data/base_place_recognition.h"
+#include "stella_vslam/data/hf_net_database.h"
 #include "stella_vslam/data/bow_database.h"
 #include "stella_vslam/data/bow_vocabulary.h"
 #include "stella_vslam/data/keyframe.h"
@@ -13,11 +15,12 @@
 
 #include <spdlog/spdlog.h>
 
-namespace stella_vslam {
-namespace module {
+#include <memory>
 
-loop_detector::loop_detector(data::bow_database* bow_db, data::bow_vocabulary* bow_vocab, const YAML::Node& yaml_node, const bool fix_scale_in_Sim3_estimation)
-    : bow_db_(bow_db), bow_vocab_(bow_vocab), transform_optimizer_(fix_scale_in_Sim3_estimation), pose_optimizer_(optimize::pose_optimizer_factory::create(yaml_node)),
+namespace stella_vslam::module {
+
+loop_detector::loop_detector(data::base_place_recognition* vpr_db, const YAML::Node& yaml_node, const bool fix_scale_in_Sim3_estimation)
+    : vpr_db_(vpr_db), transform_optimizer_(fix_scale_in_Sim3_estimation), pose_optimizer_(optimize::pose_optimizer_factory::create(yaml_node)),
       loop_detector_is_enabled_(yaml_node["enabled"].as<bool>(true)),
       fix_scale_in_Sim3_estimation_(fix_scale_in_Sim3_estimation),
       num_final_matches_thr_(yaml_node["num_final_matches_threshold"].as<unsigned int>(40)),
@@ -51,7 +54,7 @@ void loop_detector::set_current_keyframe(const std::shared_ptr<data::keyframe>& 
 bool loop_detector::detect_loop_candidates() {
     auto succeeded = detect_loop_candidates_impl();
     // register to the BoW database
-    bow_db_->add_keyframe(cur_keyfrm_);
+    vpr_db_->add_keyframe(cur_keyfrm_);
     return succeeded;
 }
 
@@ -115,9 +118,13 @@ bool loop_detector::detect_loop_candidates_impl() {
             }
         }
     }
-
-    const auto init_loop_candidates = bow_db_->acquire_keyframes(cur_keyfrm_->bow_vec_, min_score, keyfrms_to_reject);
-
+    std::vector<std::shared_ptr<data::keyframe>> init_loop_candidates;
+    if (vpr_db_->database_type == data::place_recognition_t::BoW) {
+        init_loop_candidates = dynamic_cast<data::bow_database*>(vpr_db_)->acquire_keyframes(cur_keyfrm_->bow_vec_, min_score, keyfrms_to_reject);
+    }
+    else if (vpr_db_->database_type == data::place_recognition_t::HF_Net) {
+        init_loop_candidates = dynamic_cast<data::hf_net_database*>(vpr_db_)->acquire_keyframes(cur_keyfrm_->frm_obs_.global_descriptors_.clone(), min_score, keyfrms_to_reject);
+    }
     // 1-3. if no candidates are found, cannot perform the loop correction
 
     if (init_loop_candidates.empty()) {
@@ -276,16 +283,16 @@ float loop_detector::compute_min_score_in_covisibilities(const std::shared_ptr<d
         if (covisibility->will_be_erased()) {
             continue;
         }
-        const auto& bow_vec_2 = covisibility->bow_vec_;
         float score = 0.f;
-        if (bow_db_->database_type == data::place_recognition_type::BoW) {
+        if (vpr_db_->database_type == data::place_recognition_type::BoW) {
+            const auto& bow_vec_2 = covisibility->bow_vec_;
             score = data::bow_vocabulary_util::score(bow_vocab_, bow_vec_1, bow_vec_2);
         }
-        else if (bow_db_->database_type == data::place_recognition_type::HF_Net) {
-            score = data::base_place_recognition::compute_score(keyfrm->frm_obs_.global_descriptors_, covisibility->frm_obs_.global_descriptors_);
+        else if (vpr_db_->database_type == data::place_recognition_type::HF_Net) {
+            score = data::hf_net_database::compute_score(keyfrm->frm_obs_.global_descriptors_, covisibility->frm_obs_.global_descriptors_);
         }
         else {
-            assert(bow_db_->database_type == data::place_recognition_type::BoW or bow_db_->database_type == data::place_recognition_type::HF_Net);
+            assert(vpr_db_->database_type == data::place_recognition_type::BoW or vpr_db_->database_type == data::place_recognition_type::HF_Net);
         }
         if (score < min_score) {
             min_score = score;
@@ -296,7 +303,7 @@ float loop_detector::compute_min_score_in_covisibilities(const std::shared_ptr<d
 }
 
 keyframe_sets loop_detector::find_continuously_detected_keyframe_sets(const keyframe_sets& prev_cont_detected_keyfrm_sets,
-                                                                      const std::vector<std::shared_ptr<data::keyframe>>& keyfrms_to_search) const {
+                                                                      const std::vector<std::shared_ptr<data::keyframe>>& keyfrms_to_search) {
     // count up the number of the detection of each of the keyframe sets
 
     // buffer to store continuity and keyframe set
@@ -414,9 +421,9 @@ bool loop_detector::select_loop_candidate_via_Sim3(const std::unordered_set<std:
             valid_landmarks.at(i) = valid_assoc_lms.at(i)->get_pos_in_world();
         }
         // Setup PnP solver
-        auto pnp_solver = std::unique_ptr<solve::pnp_solver>(new solve::pnp_solver(valid_bearings, valid_keypts, valid_landmarks,
-                                                                                   cur_keyfrm_->orb_params_->scale_factors_,
-                                                                                   10, use_fixed_seed_));
+        auto pnp_solver = std::make_unique<solve::pnp_solver>(valid_bearings, valid_keypts, valid_landmarks,
+                                                              cur_keyfrm_->orb_params_->scale_factors_,
+                                                              10, use_fixed_seed_);
 
         pnp_solver->find_via_ransac(30, false);
         if (!pnp_solver->solution_is_valid()) {
@@ -557,7 +564,7 @@ bool loop_detector::select_loop_candidate_via_Sim3(const std::unordered_set<std:
             }
             scales.push_back(norm_pos_1_in_curr / norm_pos_1_in_cand);
         }
-        if (scales.size() < 1) {
+        if (scales.empty()) {
             spdlog::debug("not enough scale references {}", scales.size());
             continue;
         }
@@ -568,8 +575,8 @@ bool loop_detector::select_loop_candidate_via_Sim3(const std::unordered_set<std:
 
         // perforn non-linear optimization of the estimated Sim3
 
-        projection_matcher.match_keyframes_mutually(cur_keyfrm_, candidate, curr_match_lms_observed_in_cand,
-                                                    scale_12, rot_12, trans_12, 7.5);
+        stella_vslam::match::projection::match_keyframes_mutually(cur_keyfrm_, candidate, curr_match_lms_observed_in_cand,
+                                                                  scale_12, rot_12, trans_12, 7.5);
 
         g2o::Sim3 g2o_sim3_12(rot_12, trans_12, scale_12);
         const auto num_optimized_inliers = transform_optimizer_.optimize(cur_keyfrm_, candidate, curr_match_lms_observed_in_cand,
@@ -613,5 +620,4 @@ void loop_detector::set_loop_correct_keyframe_id(const unsigned int loop_correct
     prev_loop_correct_keyfrm_id_ = loop_correct_keyfrm_id;
 }
 
-} // namespace module
-} // namespace stella_vslam
+} // namespace stella_vslam::module

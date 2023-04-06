@@ -13,10 +13,10 @@
 #include <set>
 #include <unordered_set>
 #include "bow_vocabulary_fwd.h"
+#include <yaml-cpp/yaml.h>
 
 namespace stella_vslam::data {
 class keyframe;
-
 enum class place_recognition_type {
     BoW,
     HF_Net
@@ -41,33 +41,35 @@ public:
      * Add a keyframe to the database
      * @param keyfrm
      */
-    void add_keyframe(const std::shared_ptr<keyframe>& keyfrm);
+    virtual void add_keyframe(const std::shared_ptr<keyframe>& keyfrm) = 0;
 
     /**
      * Erase the keyframe from the database
      * @param keyfrm
      */
-    void erase_keyframe(const std::shared_ptr<keyframe>& keyfrm);
+    virtual void erase_keyframe(const std::shared_ptr<keyframe>& keyfrm) = 0;
 
     /**
      * Clear the database
      */
-    void clear();
+    virtual void clear() = 0;
+
+    /**
+     * Compute representation BoW or global desc
+     * @param keyframe
+     */
+    virtual void computeRepresentation(const std::shared_ptr<keyframe>& keyframe) = 0;
 
     /**
      * Type of place_recognition_t
      */
     place_recognition_t database_type = place_recognition_type::BoW;
 
-    static float compute_score(const cv::Mat& global_desc_1, const cv::Mat& global_desc_2);
+    static place_recognition_t load_vpr_type(const YAML::Node& node);
 
 protected:
     //! mutex to access BoW database
     mutable std::mutex mtx_;
-    //! BoW database
-    std::unordered_map<unsigned int, std::list<std::shared_ptr<keyframe>>> keyfrms_in_node_{};
-    //! hf database
-    std::unordered_set<std::shared_ptr<keyframe>> keyfrms{};
 };
 
 } // namespace stella_vslam::data

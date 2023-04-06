@@ -3,7 +3,6 @@
 
 #include "stella_vslam/config.h"
 #include "stella_vslam/camera/base.h"
-#include "stella_vslam/module/local_map_cleaner.h"
 #include "stella_vslam/optimize/local_bundle_adjuster.h"
 #include "stella_vslam/data/bow_vocabulary_fwd.h"
 
@@ -28,16 +27,23 @@ namespace hloc {
 class hf_net;
 }
 
+namespace module {
+class local_map_cleaner;
+}
+
 namespace data {
+class landmark;
 class keyframe;
+class base_place_recognition;
 class bow_database;
+class hf_net_database;
 class map_database;
 } // namespace data
 
 class mapping_module {
 public:
     //! Constructor
-    mapping_module(const YAML::Node& yaml_node, data::map_database* map_db, data::bow_database* bow_db, data::bow_vocabulary* bow_vocab);
+    mapping_module(const YAML::Node& yaml_node, data::map_database* map_db, data::base_place_recognition* vpr);
 
     //! Destructor
     ~mapping_module();
@@ -219,7 +225,7 @@ private:
     global_optimization_module* global_optimizer_ = nullptr;
 
     //! local map cleaner
-    std::unique_ptr<module::local_map_cleaner> local_map_cleaner_ = nullptr;
+    std::unique_ptr<module::local_map_cleaner> local_map_cleaner_;
 
     //-----------------------------------------
     // database
@@ -227,14 +233,9 @@ private:
     //! map database
     data::map_database* map_db_ = nullptr;
 
-    //! BoW database
-    data::bow_database* bow_db_ = nullptr;
+    //! vpr
+    data::base_place_recognition* vpr_db_ = nullptr;
 
-    //! BoW vocabulary
-    data::bow_vocabulary* bow_vocab_ = nullptr;
-
-    //! HF_net
-    hloc::hf_net* hf_net_ = nullptr;
     //-----------------------------------------
     // keyframe queue
 

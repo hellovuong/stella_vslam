@@ -27,7 +27,7 @@ class landmark;
 class marker;
 class camera_database;
 class orb_params_database;
-class bow_database;
+class base_place_recognition;
 
 class map_database {
 public:
@@ -232,7 +232,7 @@ public:
      * @param json_keyfrms
      * @param json_landmarks
      */
-    void from_json(camera_database* cam_db, orb_params_database* orb_params_db, bow_vocabulary* bow_vocab,
+    void from_json(camera_database* cam_db, orb_params_database* orb_params_db, base_place_recognition* vpr_db,
                    const nlohmann::json& json_keyfrms, const nlohmann::json& json_landmarks);
 
     /**
@@ -248,7 +248,7 @@ public:
     bool from_db(sqlite3* db,
                  camera_database* cam_db,
                  orb_params_database* orb_params_db,
-                 bow_vocabulary* bow_vocab);
+                 base_place_recognition* vpr_db);
 
     /**
      * Dump keyframes and landmarks to database
@@ -269,12 +269,12 @@ private:
      * (NOTE: objects which are not constructed yet will be set as nullptr)
      * @param cam_db
      * @param orb_params_db
-     * @param bow_vocab
+     * @param vpr_db
      * @param id
      * @param json_keyfrm
      */
-    void register_keyframe(camera_database* cam_db, orb_params_database* orb_params_db, bow_vocabulary* bow_vocab,
-                           const unsigned int id, const nlohmann::json& json_keyfrm);
+    void register_keyframe(camera_database* cam_db, orb_params_database* orb_params_db, base_place_recognition* vpr_db,
+                           unsigned int id, const nlohmann::json& json_keyfrm);
 
     /**
      * Decode JSON and register landmark information to the map database
@@ -304,7 +304,7 @@ private:
                                 const std::string& table_name,
                                 camera_database* cam_db,
                                 orb_params_database* orb_params_db,
-                                bow_vocabulary* bow_vocab);
+                                base_place_recognition* vpr_db);
     bool load_landmarks_from_db(sqlite3* db, const std::string& table_name);
     void load_association_from_stmt(sqlite3_stmt* stmt);
     bool load_associations_from_db(sqlite3* db, const std::string& table_name);

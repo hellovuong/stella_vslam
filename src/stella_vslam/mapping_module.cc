@@ -6,8 +6,12 @@
 #include "stella_vslam/data/landmark.h"
 #include "stella_vslam/data/map_database.h"
 #include "stella_vslam/match/fuse.h"
+#include "stella_vslam/data/base_place_recognition.h"
+#include "stella_vslam/data/bow_database.h"
+#include "stella_vslam/data/hf_net_database.h"
 #include "stella_vslam/match/robust.h"
 #include "stella_vslam/module/two_view_triangulator.h"
+#include "stella_vslam/module/local_map_cleaner.h"
 #include "stella_vslam/optimize/local_bundle_adjuster_factory.h"
 #include "stella_vslam/solve/essential_solver.h"
 
@@ -17,9 +21,9 @@
 
 namespace stella_vslam {
 
-mapping_module::mapping_module(const YAML::Node& yaml_node, data::map_database* map_db, data::bow_database* bow_db, data::bow_vocabulary* bow_vocab)
-    : local_map_cleaner_(new module::local_map_cleaner(yaml_node, map_db, bow_db)),
-      map_db_(map_db), bow_db_(bow_db), bow_vocab_(bow_vocab),
+mapping_module::mapping_module(const YAML::Node& yaml_node, data::map_database* map_db, data::base_place_recognition* vpr_db)
+    : local_map_cleaner_(new module::local_map_cleaner(yaml_node, map_db, vpr_db)),
+      map_db_(map_db), vpr_db_(vpr_db),
       local_bundle_adjuster_(optimize::local_bundle_adjuster_factory::create(yaml_node)),
       enable_interruption_of_landmark_generation_(yaml_node["enable_interruption_of_landmark_generation"].as<bool>(true)),
       enable_interruption_before_local_BA_(yaml_node["enable_interruption_before_local_BA"].as<bool>(true)),
@@ -225,16 +229,15 @@ void mapping_module::mapping_with_new_keyframe() {
 
 void mapping_module::store_new_keyframe() {
     // compute BoW feature vector
-    if (!cur_keyfrm_->bow_is_available()) {
-        cur_keyfrm_->compute_bow(bow_vocab_);
+    if (vpr_db_->database_type == data::place_recognition_t::BoW and !cur_keyfrm_->bow_is_available()) {
+        cur_keyfrm_->compute_bow(dynamic_cast<data::bow_database*>(vpr_db_)->getBowVocab());
     }
-    if (!cur_keyfrm_->global_desc_is_available()) {
-        cur_keyfrm_->compute_global_desc(hf_net_);
+    if (vpr_db_->database_type == data::place_recognition_t::HF_Net and !cur_keyfrm_->global_desc_is_available()) {
+        cur_keyfrm_->compute_global_desc(dynamic_cast<data::hf_net_database*>(vpr_db_)->getHfNet());
     }
     // Set landmarks into local_map_cleaner to exclude invalid landmarks
     const auto cur_lms = cur_keyfrm_->get_landmarks();
-    for (unsigned int idx = 0; idx < cur_lms.size(); ++idx) {
-        auto lm = cur_lms.at(idx);
+    for (auto lm : cur_lms) {
         if (!lm) {
             continue;
         }
@@ -622,8 +625,4 @@ void mapping_module::terminate() {
         future_terminate_ = std::shared_future<void>();
     }
 }
-void mapping_module::setHfNet(hloc::hf_net* hfNet) {
-    hf_net_ = hfNet;
-}
-
 } // namespace stella_vslam

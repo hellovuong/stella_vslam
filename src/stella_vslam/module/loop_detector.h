@@ -15,7 +15,7 @@ namespace stella_vslam {
 
 namespace data {
 class keyframe;
-class bow_database;
+class base_place_recognition;
 } // namespace data
 
 namespace module {
@@ -27,7 +27,7 @@ public:
     /**
      * Constructor
      */
-    loop_detector(data::bow_database* bow_db, data::bow_vocabulary* bow_vocab, const YAML::Node& yaml_node, const bool fix_scale_in_Sim3_estimation);
+    loop_detector(data::base_place_recognition* vpr_db, const YAML::Node& yaml_node, bool fix_scale_in_Sim3_estimation);
 
     /**
      * Enable loop detection
@@ -108,8 +108,8 @@ private:
     /**
      * Find continuously detected keyframe sets
      */
-    keyframe_sets find_continuously_detected_keyframe_sets(const keyframe_sets& prev_cont_detected_keyfrm_sets,
-                                                           const std::vector<std::shared_ptr<data::keyframe>>& keyfrms_to_search) const;
+    static keyframe_sets find_continuously_detected_keyframe_sets(const keyframe_sets& prev_cont_detected_keyfrm_sets,
+                                                           const std::vector<std::shared_ptr<data::keyframe>>& keyfrms_to_search) ;
 
     /**
      * Select ONE candidate from the candidates via linear and nonlinear Sim3 validation
@@ -121,7 +121,7 @@ private:
         std::vector<std::shared_ptr<data::landmark>>& curr_match_lms_observed_in_cand) const;
 
     //! BoW database
-    data::bow_database* bow_db_;
+    data::base_place_recognition* vpr_db_;
     //! BoW vocabulary
     data::bow_vocabulary* bow_vocab_;
 

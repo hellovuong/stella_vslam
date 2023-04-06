@@ -1,4 +1,3 @@
-#include "stella_vslam/camera/base.h"
 #include "stella_vslam/data/common.h"
 #include "stella_vslam/data/frame.h"
 #include "stella_vslam/data/keyframe.h"
@@ -7,7 +6,7 @@
 #include "stella_vslam/data/camera_database.h"
 #include "stella_vslam/data/orb_params_database.h"
 #include "stella_vslam/data/map_database.h"
-#include "stella_vslam/data/bow_vocabulary.h"
+#include "stella_vslam/data/base_place_recognition.h"
 #include "stella_vslam/util/converter.h"
 #include "stella_vslam/util/sqlite3.h"
 
@@ -15,8 +14,7 @@
 #include <nlohmann/json.hpp>
 #include <sqlite3.h>
 
-namespace stella_vslam {
-namespace data {
+namespace stella_vslam::data {
 
 std::mutex map_database::mtx_database_;
 
@@ -241,7 +239,7 @@ void map_database::clear() {
     spdlog::info("clear map database");
 }
 
-void map_database::from_json(camera_database* cam_db, orb_params_database* orb_params_db, bow_vocabulary* bow_vocab,
+void map_database::from_json(camera_database* cam_db, orb_params_database* orb_params_db, base_place_recognition* vpr_db,
                              const nlohmann::json& json_keyfrms, const nlohmann::json& json_landmarks) {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
 
@@ -258,7 +256,7 @@ void map_database::from_json(camera_database* cam_db, orb_params_database* orb_p
         const auto keyfrm_id = keyfrm_id_in_storage + next_keyframe_id_;
         const auto json_keyfrm = json_id_keyfrm.value();
 
-        register_keyframe(cam_db, orb_params_db, bow_vocab, keyfrm_id, json_keyfrm);
+        register_keyframe(cam_db, orb_params_db, vpr_db, keyfrm_id, json_keyfrm);
     }
 
     // Step 3. Register 3D landmark point
@@ -342,7 +340,7 @@ void map_database::from_json(camera_database* cam_db, orb_params_database* orb_p
     }
 }
 
-void map_database::register_keyframe(camera_database* cam_db, orb_params_database* orb_params_db, bow_vocabulary* bow_vocab,
+void map_database::register_keyframe(camera_database* cam_db, orb_params_database* orb_params_db, base_place_recognition* vpr_db,
                                      const unsigned int id, const nlohmann::json& json_keyfrm) {
     // Metadata
     const auto timestamp = json_keyfrm.at("ts").get<double>();
@@ -385,12 +383,12 @@ void map_database::register_keyframe(camera_database* cam_db, orb_params_databas
     data::assign_keypoints_to_grid(camera, undist_keypts, keypt_indices_in_cells);
     // Construct frame_observation
     frame_observation frm_obs{num_keypts, descriptors, undist_keypts, bearings, stereo_x_right, depths, keypt_indices_in_cells};
-    // Compute BoW
-    data::bow_vocabulary_util::compute_bow(bow_vocab, descriptors, bow_vec, bow_feat_vec);
+
     auto keyfrm = data::keyframe::make_keyframe(
         id, timestamp, pose_cw, camera, orb_params,
         frm_obs, bow_vec, bow_feat_vec);
-
+    // Compute representation
+    vpr_db->computeRepresentation(keyfrm);
     // Append to map database
     assert(!keyframes_.count(id));
     keyframes_[keyfrm->id_] = keyfrm;
@@ -489,7 +487,7 @@ void map_database::to_json(nlohmann::json& json_keyfrms, nlohmann::json& json_la
 bool map_database::from_db(sqlite3* db,
                            camera_database* cam_db,
                            orb_params_database* orb_params_db,
-                           bow_vocabulary* bow_vocab) {
+                           base_place_recognition* vpr_db) {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
 
     // When loading the map, leave last_inserted_keyfrm_ as nullptr.
@@ -497,7 +495,7 @@ bool map_database::from_db(sqlite3* db,
     local_landmarks_.clear();
 
     // Step 2. load data from database
-    bool ok = load_keyframes_from_db(db, "keyframes", cam_db, orb_params_db, bow_vocab);
+    bool ok = load_keyframes_from_db(db, "keyframes", cam_db, orb_params_db, vpr_db);
     if (!ok) {
         return false;
     }
@@ -552,7 +550,7 @@ bool map_database::load_keyframes_from_db(sqlite3* db,
                                           const std::string& table_name,
                                           camera_database* cam_db,
                                           orb_params_database* orb_params_db,
-                                          bow_vocabulary* bow_vocab) {
+                                          base_place_recognition* vpr_db) {
     sqlite3_stmt* stmt = util::sqlite3_util::create_select_stmt(db, table_name);
     if (!stmt) {
         return false;
@@ -560,7 +558,7 @@ bool map_database::load_keyframes_from_db(sqlite3* db,
 
     int ret = SQLITE_ERROR;
     while ((ret = sqlite3_step(stmt)) == SQLITE_ROW) {
-        auto keyfrm = data::keyframe::from_stmt(stmt, cam_db, orb_params_db, bow_vocab, next_keyframe_id_);
+        auto keyfrm = data::keyframe::from_stmt(stmt, cam_db, orb_params_db, vpr_db, next_keyframe_id_);
         // Append to map database
         assert(!keyframes_.count(keyfrm->id_));
         keyframes_[keyfrm->id_] = keyfrm;
@@ -799,5 +797,4 @@ bool map_database::save_associations_to_db(sqlite3* db, const std::string& table
     return util::sqlite3_util::commit(db);
 }
 
-} // namespace data
 } // namespace stella_vslam

@@ -4,7 +4,6 @@
 #include "stella_vslam/type.h"
 #include "stella_vslam/data/bow_vocabulary.h"
 #include "stella_vslam/module/type.h"
-#include "stella_vslam/module/loop_detector.h"
 #include "stella_vslam/module/loop_bundle_adjuster.h"
 #include "stella_vslam/optimize/graph_optimizer.h"
 
@@ -13,6 +12,7 @@
 #include <thread>
 #include <memory>
 #include <future>
+#include <yaml-cpp/yaml.h>
 
 namespace stella_vslam {
 
@@ -20,10 +20,16 @@ class tracking_module;
 class mapping_module;
 
 namespace data {
+class landmark;
 class keyframe;
+class base_place_recognition;
 class bow_database;
 class map_database;
 } // namespace data
+
+namespace module {
+class loop_detector;
+}
 
 struct loop_closure_request {
     unsigned int keyfrm1_id_;
@@ -33,7 +39,7 @@ struct loop_closure_request {
 class global_optimization_module {
 public:
     //! Constructor
-    global_optimization_module(data::map_database* map_db, data::bow_database* bow_db, data::bow_vocabulary* bow_vocab, const YAML::Node& yaml_node, const bool fix_scale);
+    global_optimization_module(data::map_database* map_db, data::base_place_recognition* vpr_db, const YAML::Node& yaml_node, bool fix_scale);
 
     //! Destructor
     ~global_optimization_module();
@@ -230,7 +236,7 @@ private:
     mapping_module* mapper_ = nullptr;
 
     //! loop detector
-    std::unique_ptr<module::loop_detector> loop_detector_ = nullptr;
+    std::unique_ptr<module::loop_detector> loop_detector_;
     //! loop bundle adjuster
     std::unique_ptr<module::loop_bundle_adjuster> loop_bundle_adjuster_ = nullptr;
 

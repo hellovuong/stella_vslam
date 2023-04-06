@@ -9,8 +9,7 @@ namespace stella_vslam {
 namespace data {
 class keyframe;
 class landmark;
-class bow_database;
-class map_database;
+class base_place_recognition;
 } // namespace data
 
 namespace module {
@@ -20,7 +19,7 @@ public:
     /**
      * Constructor
      */
-    explicit local_map_cleaner(const YAML::Node& yaml_node, data::map_database* map_db, data::bow_database* bow_db);
+    explicit local_map_cleaner(const YAML::Node& yaml_node, data::map_database* map_db, data::base_place_recognition* vpr_db);
 
     /**
      * Destructor
@@ -57,8 +56,8 @@ public:
 private:
     //! map database
     data::map_database* map_db_ = nullptr;
-    //! BoW database
-    data::bow_database* bow_db_ = nullptr;
+    //! vpr database
+    data::base_place_recognition* vpr_db_ = nullptr;
 
     //!
     double redundant_obs_ratio_thr_;
