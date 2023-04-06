@@ -19,6 +19,6 @@ RUN set -x && \
     -DUSE_PANGOLIN_VIEWER:BOOL=ON \
     -DBUILD_TESTS:BOOL=ON \
     -DCMAKE_BUILD_TYPE=Release && \
-  cmake --build -j${NUM_THREADS}
+  cmake --build build -j${NUM_THREADS}
 
 ENTRYPOINT ["/bin/bash"]
