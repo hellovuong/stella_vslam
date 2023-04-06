@@ -77,6 +77,7 @@ public:
      * For vis and debug only
      */
     cv::Mat curr_img_;
+    [[nodiscard]] const std::shared_ptr<match::sg_matcher>& getSgMatcher() const;
 
 private:
     //! Extract valid (non-deleted) landmarks from landmark vector

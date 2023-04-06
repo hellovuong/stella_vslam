@@ -114,7 +114,8 @@ size_t sg_matcher::match(const std::shared_ptr<data::keyframe>& keyfrm, data::fr
 
     superGlue->MatchingPoints(frm.frm_obs_.undist_keypts_, frm.frm_obs_.descriptors_, keyfrm->frm_obs_.undist_keypts_, keyfrm->frm_obs_.descriptors_, best_matches);
 
-    for (auto& match : best_matches) {
+    for (size_t i = 0; i < best_matches.size(); i++ ) {
+        const auto& match = best_matches.at(i);
         int realIdxKF = vRealIndexKF[match.queryIdx];
         int bestIdxF = match.trainIdx;
         matched_lms_in_frm[bestIdxF] = keyfrm_lms[realIdxKF];

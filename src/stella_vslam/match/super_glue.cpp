@@ -147,11 +147,13 @@ bool SuperGlue::deserialize_engine() {
         char* model_stream = new char[size];
         file.read(model_stream, (long)size);
         file.close();
+
         IRuntime* runtime = createInferRuntime(sample::gLogger);
-        if (runtime == nullptr)
+        if (not runtime) {
             return false;
-        engine_ = std::shared_ptr<nvinfer1::ICudaEngine>(
-            runtime->deserializeCudaEngine(model_stream, size));
+        }
+
+        engine_ = std::shared_ptr<nvinfer1::ICudaEngine>(runtime->deserializeCudaEngine(model_stream, size));
         if (!engine_)
             return false;
 

@@ -138,6 +138,7 @@ public:
     //! current frame and its image
     data::frame curr_frm_;
     cv::Mat curr_img_;
+
 protected:
     //-----------------------------------------
     // tracking processes
@@ -199,11 +200,11 @@ protected:
     //! pose optimizer
     std::shared_ptr<optimize::pose_optimizer> pose_optimizer_ = nullptr;
 
-    //! frame tracker for current frame
-    const module::frame_tracker frame_tracker_;
-
     //! relocalizer
     module::relocalizer relocalizer_;
+
+    //! frame tracker for current frame
+    const module::frame_tracker frame_tracker_;
 
     //! keyframe inserter
     module::keyframe_inserter keyfrm_inserter_;

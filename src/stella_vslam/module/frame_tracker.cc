@@ -11,11 +11,15 @@
 
 #include <spdlog/spdlog.h>
 
+#include <utility>
+
 namespace stella_vslam::module {
 
-frame_tracker::frame_tracker(camera::base* camera, const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer,
-                             const unsigned int num_matches_thr, bool use_fixed_seed)
-    : camera_(camera), num_matches_thr_(num_matches_thr), use_fixed_seed_(use_fixed_seed), pose_optimizer_(pose_optimizer) {}
+frame_tracker::frame_tracker(camera::base* camera, std::shared_ptr<optimize::pose_optimizer> pose_optimizer,
+                             const unsigned int num_matches_thr, bool use_fixed_seed,
+                             std::shared_ptr<match::sg_matcher> sg_matcher)
+    : camera_(camera), num_matches_thr_(num_matches_thr), use_fixed_seed_(use_fixed_seed),
+      pose_optimizer_(std::move(pose_optimizer)), sg_matcher_(std::move(sg_matcher)) {}
 
 bool frame_tracker::motion_based_track(data::frame& curr_frm, const data::frame& last_frm, const Mat44_t& velocity) const {
     match::projection projection_matcher(0.9, true);
@@ -60,15 +64,16 @@ bool frame_tracker::motion_based_track(data::frame& curr_frm, const data::frame&
 }
 
 bool frame_tracker::bow_match_based_track(data::frame& curr_frm, const data::frame& last_frm, const std::shared_ptr<data::keyframe>& ref_keyfrm) const {
-    match::bow_tree bow_matcher(0.7, true);
     // Search 2D-2D matches between the ref keyframes and the current frame
     // to acquire 2D-3D matches between the frame keypoints and 3D points observed in the ref keyframe
     std::vector<std::shared_ptr<data::landmark>> matched_lms_in_curr;
     size_t num_matches = 0;
     if (curr_frm.frm_obs_.descriptors_.type() == CV_32F) {
-        num_matches = match::bruce_force::match(ref_keyfrm, curr_frm, matched_lms_in_curr);
+        std::vector<cv::DMatch> best_matches;
+        num_matches = sg_matcher_->match(ref_keyfrm, curr_frm, matched_lms_in_curr, best_matches);
     }
     else if (curr_frm.frm_obs_.descriptors_.type() == CV_8U) {
+        match::bow_tree bow_matcher(0.7, true);
         num_matches = bow_matcher.match_frame_and_keyframe(ref_keyfrm, curr_frm, matched_lms_in_curr);
     }
     else {
@@ -157,4 +162,4 @@ unsigned int frame_tracker::discard_outliers(const std::vector<bool>& outlier_fl
     return num_valid_matches;
 }
 
-} // namespace stella_vslam
+} // namespace stella_vslam::module

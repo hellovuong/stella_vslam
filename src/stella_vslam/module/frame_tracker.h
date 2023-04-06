@@ -3,6 +3,7 @@
 
 #include "stella_vslam/type.h"
 #include "stella_vslam/optimize/pose_optimizer.h"
+#include "stella_vslam/match/bruce_force.h"
 
 #include <memory>
 
@@ -22,7 +23,9 @@ namespace module {
 
 class frame_tracker {
 public:
-    explicit frame_tracker(camera::base* camera, const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer, const unsigned int num_matches_thr = 20, bool use_fixed_seed = false);
+    explicit frame_tracker(camera::base* camera, std::shared_ptr<optimize::pose_optimizer> pose_optimizer,
+                           unsigned int num_matches_thr = 20, bool use_fixed_seed = false,
+                           std::shared_ptr<match::sg_matcher> sg_matcher = nullptr);
 
     bool motion_based_track(data::frame& curr_frm, const data::frame& last_frm, const Mat44_t& velocity) const;
 
@@ -39,6 +42,9 @@ private:
     const bool use_fixed_seed_;
 
     std::shared_ptr<optimize::pose_optimizer> pose_optimizer_ = nullptr;
+
+    //! super glue matcher
+    std::shared_ptr<match::sg_matcher> sg_matcher_ = nullptr;
 };
 
 } // namespace module

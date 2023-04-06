@@ -409,5 +409,8 @@ std::unique_ptr<solve::pnp_solver> relocalizer::setup_pnp_solver(const std::vect
     cv::drawMatches(img1, undist_keypts_1, img2, undist_keypts_2, matches, show_img);
     cv::imwrite("matches_w_candidates.png", show_img);
 }
+const std::shared_ptr<match::sg_matcher>& relocalizer::getSgMatcher() const {
+    return sg_matcher_;
+}
 
 } // namespace stella_vslam::module

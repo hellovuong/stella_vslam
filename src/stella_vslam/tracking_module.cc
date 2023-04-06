@@ -30,8 +30,8 @@ tracking_module::tracking_module(const std::shared_ptr<config>& cfg, camera::bas
       map_db_(map_db), vpr_db_(vpr_db),
       initializer_(map_db, util::yaml_optional_ref(cfg->yaml_node_, "Initializer")),
       pose_optimizer_(optimize::pose_optimizer_factory::create(util::yaml_optional_ref(cfg->yaml_node_, "Tracking"))),
-      frame_tracker_(camera_, pose_optimizer_, 10, initializer_.get_use_fixed_seed()),
       relocalizer_(pose_optimizer_, util::yaml_optional_ref(cfg->yaml_node_, "Relocalizer")),
+      frame_tracker_(camera_, pose_optimizer_, 10, initializer_.get_use_fixed_seed(), relocalizer_.getSgMatcher()),
       keyfrm_inserter_(util::yaml_optional_ref(cfg->yaml_node_, "KeyframeInserter")) {
     spdlog::debug("CONSTRUCT: tracking_module");
 }
