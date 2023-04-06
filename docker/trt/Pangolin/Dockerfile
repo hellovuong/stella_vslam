@@ -7,15 +7,18 @@ COPY ${PWD} /stella_vslam/
 WORKDIR /stella_vslam/
 RUN set -x && \
   mkdir -p build && \
-  cd build && \
-  cmake \
+  cmake -B build \
     -GNinja \
-    -DUSE_PANGOLIN_VIEWER=ON \
     -DBUILD_EXAMPLES=ON \
-    -DDETERMINISTIC:BOOL=ON \
-    -DUSE_STACK_TRACE_LOGGER=ON \
-    -DCMAKE_BUILD_TYPE=Release \
-    .. && \
-  make -j${NUM_THREADS} && \
+    -DUSE_GTSAM=ON \
+    -DUSE_OPENMP=ON \
+    -DDETERMINISTIC=ON \
+    -DENABLE_TRACE_LEVEL_LOG=ON \
+    -DUSE_OPENMP=ON \
+    -DUSE_STACK_TRACE_LOGGER:BOOL=ON \
+    -DUSE_PANGOLIN_VIEWER:BOOL=ON \
+    -DBUILD_TESTS:BOOL=ON \
+    -DCMAKE_BUILD_TYPE=Release && \
+  cmake --build -j${NUM_THREADS}
 
 ENTRYPOINT ["/bin/bash"]
