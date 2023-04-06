@@ -38,7 +38,7 @@ std::vector<std::shared_ptr<keyframe>> bow_database::acquire_keyframes(const bow
             max_num_common_words = keyfrm_num_common_words_pair.second;
         }
     }
-    const auto min_num_common_words_thr = static_cast<unsigned int>(0.8f * max_num_common_words);
+    const auto min_num_common_words_thr = static_cast<unsigned int>(0.8f * float(max_num_common_words));
 
     // Step 2.
     // Collect keyframe candidates which have more shared words than min_num_common_words_thr

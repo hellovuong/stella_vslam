@@ -24,7 +24,7 @@ namespace module {
 class relocalizer {
 public:
     //! Constructor
-    explicit relocalizer(std::shared_ptr<optimize::pose_optimizer>  pose_optimizer,
+    explicit relocalizer(std::shared_ptr<optimize::pose_optimizer> pose_optimizer,
                          const double bow_match_lowe_ratio = 0.75, const double proj_match_lowe_ratio = 0.9,
                          const double robust_match_lowe_ratio = 0.8,
                          const unsigned int min_num_bow_matches = 20, const unsigned int min_num_valid_obs = 50,
@@ -58,10 +58,28 @@ public:
                      const std::set<std::shared_ptr<data::landmark>>& already_found_landmarks) const;
     bool refine_pose_by_local_map(data::frame& curr_frm,
                                   const std::shared_ptr<stella_vslam::data::keyframe>& candidate_keyfrm) const;
+    /**
+     * For debug only
+     * @param reloc_candidates
+     */
+    [[maybe_unused]] static void visualCandidates(const std::vector<std::shared_ptr<data::keyframe>>& reloc_candidates);
+
+    /**
+     * For debug only
+     * @param reloc_candidates
+     */
+    [[maybe_unused]] static void drawMatches(const cv::Mat& img1, const cv::Mat& img2,
+                                             const std::vector<cv::KeyPoint>& undist_keypts_1, const std::vector<cv::KeyPoint>& undist_keypts_2,
+                                             const std::vector<cv::DMatch>& matches_result);
+
+    /**
+     * For vis and debug only
+     */
+    cv::Mat curr_img_;
 
 private:
     //! Extract valid (non-deleted) landmarks from landmark vector
-    static std::vector<unsigned int> extract_valid_indices(const std::vector<std::shared_ptr<data::landmark>>& landmarks) ;
+    static std::vector<unsigned int> extract_valid_indices(const std::vector<std::shared_ptr<data::landmark>>& landmarks);
 
     //! Setup PnP solver with the specified 2D-3D matches
     std::unique_ptr<solve::pnp_solver> setup_pnp_solver(const std::vector<unsigned int>& valid_indices,

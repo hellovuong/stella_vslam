@@ -5,7 +5,6 @@
 #include "stella_vslam/data/keyframe.h"
 
 #include "base_place_recognition.h"
-#include "spdlog/spdlog.h"
 
 namespace stella_vslam::data {
 base_place_recognition::~base_place_recognition() {

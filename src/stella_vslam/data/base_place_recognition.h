@@ -15,6 +15,7 @@
 #include "bow_vocabulary_fwd.h"
 #include <yaml-cpp/yaml.h>
 #include <opencv2/opencv.hpp>
+#include "spdlog/spdlog.h"
 
 namespace stella_vslam::data {
 class keyframe;

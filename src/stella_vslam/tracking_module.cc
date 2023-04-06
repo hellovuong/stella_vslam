@@ -206,6 +206,7 @@ bool tracking_module::track(bool relocalization_is_needed) {
 
         // try to relocalize
         SPDLOG_TRACE("tracking_module: try to relocalize (curr_frm_={})", curr_frm_.id_);
+        relocalizer_.curr_img_ = curr_img_.clone();
         succeeded = relocalizer_.relocalize(vpr_db_, curr_frm_);
         if (succeeded) {
             last_reloc_frm_id_ = curr_frm_.id_;
@@ -531,7 +532,6 @@ void tracking_module::search_local_landmarks() {
                                     ? 10.0f
                                     : 5.0f);
     auto num_matches = projection_matcher.match_frame_and_landmarks(curr_frm_, local_landmarks_, lm_to_reproj, lm_to_x_right, lm_to_scale, margin);
-    spdlog::debug("tracking_module::search_local_landmarks(): num of match frame and local landmarks {}", num_matches);
 }
 
 bool tracking_module::new_keyframe_is_needed(unsigned int num_tracked_lms,

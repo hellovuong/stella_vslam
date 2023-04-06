@@ -75,12 +75,11 @@ void hf_net_database::clear() {
     keyfrms.clear();
     spdlog::info("clear vpr database");
 }
-hloc::hf_net* hf_net_database::getHfNet() const {
-    return hf_net_;
-}
+
 void hf_net_database::computeRepresentation(const std::shared_ptr<keyframe>& keyframe) {
     hf_net_->compute_global_descriptors(keyframe->img.clone(), keyframe->frm_obs_.global_descriptors_);
 }
+
 void hf_net_database::computeRepresentation(frame& frame, const cv::Mat& img) {
     hf_net_->compute_global_descriptors(img.clone(), frame.frm_obs_.global_descriptors_);
 }

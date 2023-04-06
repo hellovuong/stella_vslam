@@ -22,6 +22,9 @@ class bruce_force {
 public:
     static size_t match(const std::shared_ptr<data::keyframe>& keyfrm, data::frame& frm,
                         std::vector<std::shared_ptr<data::landmark>>& matched_lms_in_frm);
+    static size_t match(const std::shared_ptr<data::keyframe>& keyfrm, data::frame& frm,
+                        std::vector<std::shared_ptr<data::landmark>>& matched_lms_in_frm,
+                        std::vector<cv::DMatch>& best_matches);
     const float TH_HIGH = 0.75;
     constexpr static const float TH_LOW = 0.6;
 };

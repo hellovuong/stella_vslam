@@ -20,7 +20,9 @@ public:
      */
     explicit hf_net_database(hloc::hf_net* hfNet)
         : base_place_recognition(place_recognition_type::HF_Net),
-          hf_net_(hfNet){};
+          hf_net_(hfNet) {
+        spdlog::debug("CONSTRUCT: data::hf_net_database");
+    };
 
     /**
      * Destructor
@@ -69,7 +71,6 @@ public:
      * @return
      */
     static float compute_score(const cv::Mat& global_desc_1, const cv::Mat& global_desc_2);
-    hloc::hf_net* getHfNet() const;
 
 protected:
     /**

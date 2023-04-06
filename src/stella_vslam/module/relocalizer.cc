@@ -50,6 +50,9 @@ bool relocalizer::relocalize(data::base_place_recognition* vpr_db, data::frame& 
     else if (vpr_db->database_type == data::place_recognition_t::HF_Net) {
         reloc_candidates = dynamic_cast<data::hf_net_database*>(vpr_db)->acquire_keyframes(curr_frm.frm_obs_.global_descriptors_.clone());
     }
+    else {
+        spdlog::warn("Undefined type of place recognition!");
+    }
 
     if (reloc_candidates.empty()) {
         spdlog::debug("relocalizer::relocalize: Empty reloc candidates");
@@ -133,16 +136,16 @@ bool relocalizer::relocalize_by_pnp_solver(data::frame& curr_frm,
                                            std::vector<unsigned int>& inlier_indices,
                                            std::vector<std::shared_ptr<data::landmark>>& matched_landmarks) const {
     size_t num_matches;
+    std::vector<cv::DMatch> match_result;
     if (curr_frm.frm_obs_.descriptors_.type() == CV_8U) {
         num_matches = use_robust_matcher ? robust_matcher_.match_frame_and_keyframe(curr_frm, candidate_keyfrm, matched_landmarks)
                                          : bow_matcher_.match_frame_and_keyframe(candidate_keyfrm, curr_frm, matched_landmarks);
     }
     else {
-        num_matches = match::bruce_force::match(candidate_keyfrm, curr_frm, matched_landmarks);
+        num_matches = match::bruce_force::match(candidate_keyfrm, curr_frm, matched_landmarks, match_result);
     }
     // Discard the candidate if the number of 2D-3D matches is less than the threshold
     if (num_matches < min_num_bow_matches_) {
-        spdlog::debug("Number of 2D-3D matches ({}) < threshold ({}). candidate keyframe id is {}", num_matches, min_num_bow_matches_, candidate_keyfrm->id_);
         return false;
     }
 
@@ -379,6 +382,27 @@ std::unique_ptr<solve::pnp_solver> relocalizer::setup_pnp_solver(const std::vect
     }
     // Setup PnP solver
     return std::make_unique<solve::pnp_solver>(valid_bearings, valid_keypts, valid_landmarks, scale_factors, 10, use_fixed_seed_);
+}
+[[maybe_unused]] void relocalizer::visualCandidates(const std::vector<std::shared_ptr<data::keyframe>>& reloc_candidates) {
+    cv::Mat show_img;
+    bool first_img = true;
+    for (const auto& reloc_candidate : reloc_candidates) {
+        if (first_img) {
+            show_img = reloc_candidate->img.clone();
+            first_img = false;
+        }
+        else {
+            cv::hconcat(show_img, reloc_candidate->img.clone(), show_img);
+        }
+    }
+    cv::imwrite("relocalized candidates", show_img);
+}
+[[maybe_unused]] void relocalizer::drawMatches(const cv::Mat& img1, const cv::Mat& img2,
+                              const std::vector<cv::KeyPoint>& undist_keypts_1, const std::vector<cv::KeyPoint>& undist_keypts_2,
+                              const std::vector<cv::DMatch>& matches) {
+    cv::Mat show_img;
+    cv::drawMatches(img1, undist_keypts_1, img2, undist_keypts_2, matches, show_img);
+    cv::imwrite("matches_w_candidates.png", show_img);
 }
 
 } // namespace stella_vslam::module
