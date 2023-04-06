@@ -18,7 +18,7 @@ std::vector<std::shared_ptr<keyframe>> hf_net_database::acquire_keyframes(const 
                                                                           const std::set<std::shared_ptr<keyframe>>& keyfrms_to_reject) {
     float best_score;
     auto scores = compute_scores(global_desc, min_score, best_score);
-    min_score = best_score * 0.8f;
+    min_score = best_score * 0.9f;
 
     std::unordered_set<std::shared_ptr<keyframe>> final_candidates;
     for (const auto& keyfrm_score : scores) {

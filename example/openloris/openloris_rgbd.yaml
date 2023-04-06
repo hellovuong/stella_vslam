@@ -32,10 +32,10 @@ Camera:
 # Odometry #
 #==========#
 Odometry:
-  Tbc: [-0.00113729264458,  0.999965055267,     0.00828219834348,   0.0545104875654,
-        -0.00206245548802,  -0.00828453162111,  0.999963555742,     -0.915839044531,
-        0.999997226418,     0.00112016953136,   0.00207180535294,   -0.228417979642,
-        0,                  0,                  0,                  1]
+  Tbc: [ -0.00113729264458,  0.999965055267,     0.00828219834348,   0.0545104875654,
+         -0.00206245548802,  -0.00828453162111,  0.999963555742,     -0.915839044531,
+         0.999997226418,     0.00112016953136,   0.00207180535294,   -0.228417979642,
+         0,                  0,                  0,                  1 ]
   frequency: 200
   noiseLinearVel: 1e-3
   noiseAngularVel: 1e-3
@@ -55,12 +55,6 @@ Preprocessing:
 #================#
 
 Feature:
-#  type: "ORB" # ORB or SuperPoint
-#  name: "default ORB feature extraction setting"
-#  scale_factor: 1.2
-#  num_levels: 8
-#  ini_fast_threshold: 20
-#  min_fast_threshold: 7
   type: "SuperPoint" # ORB or SuperPoint
   name: "default SuperPoint feature extraction setting"
   max_keypoints: 1000
@@ -104,6 +98,10 @@ Tracking:
 LoopDetector:
   backend: "g2o"
 
+#=============================#
+# PlaceRecognition Parameters #
+#=============================#
+
 PlaceRecognition:
   type: "HF_Net"
   image_width: 848
@@ -111,6 +109,27 @@ PlaceRecognition:
   onnx_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/HFNet-RT/HF-Net.onnx"
   cache_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/HFNet-RT/HF-Net.cache"
   engine_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/HFNet-RT/HF-Net.engine"
+
+#========================#
+# Relocalizer Parameters #
+#========================#
+
+Relocalizer:
+  SuperGlue:
+    image_width: 848
+    image_height: 480
+    input_tensor_names:
+      - "keypoints_0"
+      - "scores_0"
+      - "descriptors_0"
+      - "keypoints_1"
+      - "scores_1"
+      - "descriptors_1"
+    output_tensor_names:
+      - "scores"
+    onnx_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/openglue_int32.onnx"
+    engine_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/openglue_int32.engine"
+    dla_core: -1
 
 #===========================#
 # PangolinViewer Parameters #

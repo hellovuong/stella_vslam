@@ -19,10 +19,12 @@ relocalizer::relocalizer(std::shared_ptr<optimize::pose_optimizer> pose_optimize
                          const double bow_match_lowe_ratio, const double proj_match_lowe_ratio,
                          const double robust_match_lowe_ratio,
                          const unsigned int min_num_bow_matches, const unsigned int min_num_valid_obs,
-                         const bool use_fixed_seed)
+                         const bool use_fixed_seed,
+                         const YAML::Node& sg_yaml_node)
     : min_num_bow_matches_(min_num_bow_matches), min_num_valid_obs_(min_num_valid_obs),
       bow_matcher_((float)bow_match_lowe_ratio, false), proj_matcher_((float)proj_match_lowe_ratio, false),
       robust_matcher_((float)robust_match_lowe_ratio, false),
+      sg_matcher_(std::make_unique<match::sg_matcher>(sg_yaml_node)),
       pose_optimizer_(std::move(pose_optimizer)), use_fixed_seed_(use_fixed_seed) {
     spdlog::debug("CONSTRUCT: module::relocalizer");
 }
@@ -34,7 +36,8 @@ relocalizer::relocalizer(const std::shared_ptr<optimize::pose_optimizer>& pose_o
                   yaml_node["robust_match_lowe_ratio"].as<double>(0.8),
                   yaml_node["min_num_bow_matches"].as<unsigned int>(20),
                   yaml_node["min_num_valid_obs"].as<unsigned int>(50),
-                  yaml_node["use_fixed_seed"].as<bool>(false)) {
+                  yaml_node["use_fixed_seed"].as<bool>(false),
+                  yaml_node["SuperGlue"]) {
 }
 
 relocalizer::~relocalizer() {
@@ -142,14 +145,16 @@ bool relocalizer::relocalize_by_pnp_solver(data::frame& curr_frm,
                                          : bow_matcher_.match_frame_and_keyframe(candidate_keyfrm, curr_frm, matched_landmarks);
     }
     else {
-        num_matches = match::bruce_force::match(candidate_keyfrm, curr_frm, matched_landmarks, match_result);
+        num_matches = sg_matcher_->match(candidate_keyfrm, curr_frm, matched_landmarks, match_result);
     }
     // Discard the candidate if the number of 2D-3D matches is less than the threshold
     if (num_matches < min_num_bow_matches_) {
         return false;
     }
 
-    // Setup an PnP solver with the current 2D-3D matches
+    drawMatches(curr_img_, candidate_keyfrm->img.clone(), curr_frm.frm_obs_.undist_keypts_, candidate_keyfrm->frm_obs_.undist_keypts_, match_result);
+
+    // Set up an PnP solver with the current 2D-3D matches
     const auto valid_indices = extract_valid_indices(matched_landmarks);
     auto pnp_solver = setup_pnp_solver(valid_indices, curr_frm.frm_obs_.bearings_, curr_frm.frm_obs_.undist_keypts_,
                                        matched_landmarks, curr_frm.orb_params_->scale_factors_);

@@ -25,10 +25,11 @@ class relocalizer {
 public:
     //! Constructor
     explicit relocalizer(std::shared_ptr<optimize::pose_optimizer> pose_optimizer,
-                         const double bow_match_lowe_ratio = 0.75, const double proj_match_lowe_ratio = 0.9,
-                         const double robust_match_lowe_ratio = 0.8,
-                         const unsigned int min_num_bow_matches = 20, const unsigned int min_num_valid_obs = 50,
-                         const bool use_fixed_seed = false);
+                         double bow_match_lowe_ratio = 0.75, double proj_match_lowe_ratio = 0.9,
+                         double robust_match_lowe_ratio = 0.8,
+                         unsigned int min_num_bow_matches = 20, unsigned int min_num_valid_obs = 50,
+                         bool use_fixed_seed = false,
+                         const YAML::Node& yaml_node = YAML::Node());
 
     explicit relocalizer(const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer, const YAML::Node& yaml_node);
 
@@ -82,7 +83,7 @@ private:
     static std::vector<unsigned int> extract_valid_indices(const std::vector<std::shared_ptr<data::landmark>>& landmarks);
 
     //! Setup PnP solver with the specified 2D-3D matches
-    std::unique_ptr<solve::pnp_solver> setup_pnp_solver(const std::vector<unsigned int>& valid_indices,
+    [[nodiscard]] std::unique_ptr<solve::pnp_solver> setup_pnp_solver(const std::vector<unsigned int>& valid_indices,
                                                         const eigen_alloc_vector<Vec3_t>& bearings,
                                                         const std::vector<cv::KeyPoint>& keypts,
                                                         const std::vector<std::shared_ptr<data::landmark>>& matched_landmarks,
@@ -99,6 +100,10 @@ private:
     const match::projection proj_matcher_;
     //! robust matcher
     const match::robust robust_matcher_;
+
+    //! super glue matcher
+    std::shared_ptr<match::sg_matcher> sg_matcher_ = nullptr;
+
     //! pose optimizer
     std::shared_ptr<optimize::pose_optimizer> pose_optimizer_ = nullptr;
 
