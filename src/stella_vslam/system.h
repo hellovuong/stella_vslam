@@ -60,7 +60,7 @@ class map_database_io_base;
 class system {
 public:
     //! Constructor
-    system(const std::shared_ptr<config>& cfg, const std::string& vocab_file_path);
+    system(const std::shared_ptr<config>& cfg);
 
     //! Destructor
     ~system();

@@ -336,7 +336,7 @@ int main(int argc, char* argv[]) {
         std::cerr << op << std::endl;
         return EXIT_FAILURE;
     }
-    if (!vocab_file_path->is_set() || !data_dir_path->is_set() || !config_file_path->is_set()) {
+    if (!data_dir_path->is_set() || !config_file_path->is_set()) {
         std::cerr << "invalid arguments" << std::endl;
         std::cerr << std::endl;
         std::cerr << op << std::endl;
@@ -362,7 +362,7 @@ int main(int argc, char* argv[]) {
 #endif
 
     // build a slam system
-    auto slam = std::make_shared<stella_vslam::system>(cfg, vocab_file_path->value());
+    auto slam = std::make_shared<stella_vslam::system>(cfg);
     bool need_initialize = true;
     if (map_db_path_in->is_set()) {
         need_initialize = false;

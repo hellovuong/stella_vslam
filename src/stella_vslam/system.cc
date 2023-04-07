@@ -10,8 +10,6 @@
 #include "stella_vslam/data/orb_params_database.h"
 #include "stella_vslam/data/map_database.h"
 #include "stella_vslam/data/base_place_recognition_factory.h"
-#include "stella_vslam/data/bow_database.h"
-#include "stella_vslam/data/bow_vocabulary.h"
 #include "stella_vslam/data/marker2d.h"
 #include "stella_vslam/marker_detector/aruco.h"
 #include "stella_vslam/match/stereo.h"
@@ -33,7 +31,7 @@
 
 namespace stella_vslam {
 
-system::system(const std::shared_ptr<config>& cfg, const std::string& vocab_file_path)
+system::system(const std::shared_ptr<config>& cfg)
     : cfg_(cfg) {
     spdlog::debug("CONSTRUCT: system");
     print_info();
