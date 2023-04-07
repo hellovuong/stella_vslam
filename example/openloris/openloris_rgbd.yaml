@@ -127,8 +127,8 @@ Relocalizer:
       - "descriptors_1"
     output_tensor_names:
       - "scores"
-    onnx_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/openglue_int32.onnx"
-    engine_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/openglue_int32.engine"
+    onnx_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/superglue_int32.onnx"
+    engine_file: "/home/vuong/Dev/prv/ws/vo_ws/src/stella_vslam/data/trt/models/superglue_int32.engine"
     dla_core: -1
 
 #===========================#
