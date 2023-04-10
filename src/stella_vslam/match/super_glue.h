@@ -64,12 +64,6 @@ private:
     std::vector<double> mscores0_;
     std::vector<double> mscores1_;
 
-    nvinfer1::Dims keypoints_0_dims_{};
-    nvinfer1::Dims scores_0_dims_{};
-    nvinfer1::Dims descriptors_0_dims_{};
-    nvinfer1::Dims keypoints_1_dims_{};
-    nvinfer1::Dims scores_1_dims_{};
-    nvinfer1::Dims descriptors_1_dims_{};
     nvinfer1::Dims output_scores_dims_{};
 
     std::unique_ptr<samplesCommon::BufferManager> buffers_manager_;
