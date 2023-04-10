@@ -70,7 +70,7 @@ bool relocalizer::reloc_by_candidates(data::frame& curr_frm,
                                       bool use_robust_matcher) const {
     const auto num_candidates = reloc_candidates.size();
 
-    spdlog::debug("Start relocalization. Number of candidate keyframes is {}", num_candidates);
+    spdlog::debug("relocalizer::reloc_by_candidates: Start relocalization. Number of candidate keyframes is {}", num_candidates);
 
     // Compute matching points for each candidate by using BoW tree matcher
     for (unsigned int i = 0; i < num_candidates; ++i) {
@@ -108,7 +108,7 @@ bool relocalizer::reloc_by_candidate(data::frame& curr_frm,
         // Set only the valid 3D points to the current frame
         curr_frm.add_landmark(matched_landmarks.at(idx), idx);
     }
-
+    spdlog::debug("2. optimize_pose");
     std::vector<bool> outlier_flags;
     ok = optimize_pose(curr_frm, candidate_keyfrm, outlier_flags);
     if (!ok) {
@@ -160,7 +160,8 @@ bool relocalizer::relocalize_by_pnp_solver(data::frame& curr_frm,
                                        matched_landmarks, curr_frm.orb_params_->scale_factors_);
 
     // 1. Estimate the camera pose using EPnP (+ RANSAC)
-
+    spdlog::debug("1. Estimate the camera pose using EPnP (+ RANSAC)");
+    spdlog::debug("- valid / total : {} / {}", valid_indices.size(), matched_landmarks.size());
     pnp_solver->find_via_ransac(30, false);
     if (!pnp_solver->solution_is_valid()) {
         spdlog::debug("solution is not valid. candidate keyframe id is {}", candidate_keyfrm->id_);
@@ -185,7 +186,8 @@ bool relocalizer::optimize_pose(data::frame& curr_frm,
 
     // Discard the candidate if the number of the inliers is less than the threshold
     if (num_valid_obs < min_num_bow_matches_ / 2) {
-        spdlog::debug("Number of inliers ({}) < threshold ({}). candidate keyframe id is {}", num_valid_obs, min_num_bow_matches_ / 2, candidate_keyfrm->id_);
+        spdlog::debug("relocalizer::optimize_pose: Number of inliers after opt ({}) < threshold ({}). candidate keyframe id is {}",
+                      num_valid_obs, min_num_bow_matches_ / 2, candidate_keyfrm->id_);
         return false;
     }
 
@@ -204,21 +206,21 @@ bool relocalizer::refine_pose(data::frame& curr_frm,
                               const std::shared_ptr<stella_vslam::data::keyframe>& candidate_keyfrm,
                               const std::set<std::shared_ptr<data::landmark>>& already_found_landmarks) const {
     // 3. Apply projection match to increase 2D-3D matches
-
+    spdlog::debug("3. Apply projection match to increase 2D-3D matches");
     auto num_valid_obs = already_found_landmarks.size();
 
     // Projection match based on the pre-optimized camera pose
     auto num_found = proj_matcher_.match_frame_and_keyframe(curr_frm, candidate_keyfrm, already_found_landmarks, 10, 100);
     // Discard the candidate if the number of the inliers is less than the threshold
     if (num_valid_obs + num_found < min_num_valid_obs_) {
-        spdlog::debug("Number of inliers ({}) < threshold ({}). candidate keyframe id is {}", num_valid_obs + num_found, min_num_valid_obs_, candidate_keyfrm->id_);
+        spdlog::debug("relocalizer::refine_pose: Number of inliers ({}) after projection match < threshold ({}). candidate keyframe id is {}", num_valid_obs + num_found, min_num_valid_obs_, candidate_keyfrm->id_);
         return false;
     }
 
     Mat44_t optimized_pose1;
     std::vector<bool> outlier_flags1;
     auto num_valid_obs1 = pose_optimizer_->optimize(curr_frm, optimized_pose1, outlier_flags1);
-    SPDLOG_TRACE("refine_pose: num_valid_obs1={}", num_valid_obs1);
+    spdlog::debug("relocalizer::refine_pose: refine_pose: num_valid_obs1={}", num_valid_obs1);
     curr_frm.set_pose_cw(optimized_pose1);
 
     // Exclude the already-associated landmarks
@@ -235,7 +237,8 @@ bool relocalizer::refine_pose(data::frame& curr_frm,
 
     // Discard if the number of the observations is less than the threshold
     if (num_valid_obs1 + num_additional < min_num_valid_obs_) {
-        spdlog::debug("Number of observations ({}) < threshold ({}). candidate keyframe id is {}", num_valid_obs1 + num_additional, min_num_valid_obs_, candidate_keyfrm->id_);
+        spdlog::debug("relocalizer::refine_pose: Number of observations ({}) < threshold ({}). candidate keyframe id is {}",
+                      num_valid_obs1 + num_additional, min_num_valid_obs_, candidate_keyfrm->id_);
         return false;
     }
 
@@ -243,12 +246,13 @@ bool relocalizer::refine_pose(data::frame& curr_frm,
     Mat44_t optimized_pose2;
     std::vector<bool> outlier_flags2;
     auto num_valid_obs2 = pose_optimizer_->optimize(curr_frm, optimized_pose2, outlier_flags2);
-    SPDLOG_TRACE("refine_pose: num_valid_obs2={}", num_valid_obs2);
+    SPDLOG_TRACE("relocalizer::refine_pose: num_valid_obs2={}", num_valid_obs2);
     curr_frm.set_pose_cw(optimized_pose2);
 
     // Discard if falling below the threshold
     if (num_valid_obs2 < min_num_valid_obs_) {
-        spdlog::debug("Number of observatoins ({}) < threshold ({}). candidate keyframe id is {}", num_valid_obs2, min_num_valid_obs_, candidate_keyfrm->id_);
+        spdlog::debug("relocalizer::refine_pose: Number of observatoins ({}) < threshold ({}). "
+            "candidate keyframe id is {}", num_valid_obs2, min_num_valid_obs_, candidate_keyfrm->id_);
         return false;
     }
 
@@ -265,6 +269,7 @@ bool relocalizer::refine_pose(data::frame& curr_frm,
 
 bool relocalizer::refine_pose_by_local_map(data::frame& curr_frm,
                                            const std::shared_ptr<stella_vslam::data::keyframe>& candidate_keyfrm) const {
+    spdlog::debug("4. relocalizer::refine_pose_by_local_map");
     // Create local map
     constexpr unsigned int max_num_local_keyfrms = 10;
     auto local_map_updater = module::local_map_updater(curr_frm, max_num_local_keyfrms);
@@ -341,13 +346,15 @@ bool relocalizer::refine_pose_by_local_map(data::frame& curr_frm,
             }
             curr_frm.erase_landmark_with_index(idx);
         }
-        SPDLOG_TRACE("refine_pose_by_local_map: iter={:2}, margin={:2}, num_additional_matches={:4}, num_valid_obs={:4}", i, margin, num_additional_matches, num_valid_obs);
+        spdlog::debug("relocalizer::refine_pose_by_local_map: iter={:2}, margin={:2}, num_additional_matches={:4}, num_valid_obs={:4}",
+                      i, margin, num_additional_matches, num_valid_obs);
 
         if (i == margins.size() - 1) {
             const auto num_tracked_lms = candidate_keyfrm->get_num_tracked_landmarks(0);
-            const double ratio = 0.2;
-            SPDLOG_TRACE("refine_pose_by_local_map: num_valid_obs={:4}, num_tracked_lms={:4}", num_valid_obs, num_tracked_lms);
+            const double ratio = 0.1;
+            spdlog::debug("relocalizer::refine_pose_by_local_map: num_valid_obs={:4}, num_tracked_lms={:4}", num_valid_obs, num_tracked_lms);
             if (num_valid_obs < num_tracked_lms * ratio) {
+                spdlog::debug("relocalizer::refine_pose_by_local_map: Rejected: num_valid_obs={:4} < num_tracked_lms={:4} * 0.2", num_valid_obs, num_tracked_lms);
                 return false;
             }
         }
