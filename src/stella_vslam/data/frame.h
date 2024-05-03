@@ -56,7 +56,8 @@ public:
      * @param markers_2d
      */
     frame(const double timestamp, camera::base* camera, feature::orb_params* orb_params,
-          const frame_observation frm_obs, const std::unordered_map<unsigned int, marker2d>& markers_2d);
+          const frame_observation frm_obs, const std::unordered_map<unsigned int, marker2d>& markers_2d,
+          const Eigen::Isometry2d& robot_pose = {}, const Vec3_t& vel = Vec3_t{});
 
     /**
      * Set camera pose and refresh rotation and translation
@@ -104,6 +105,14 @@ public:
      */
     Mat33_t get_rot_cw() const {
         return rot_cw_;
+    }
+
+    Vec3_t get_vel() const {
+        return vel_;
+    }
+    
+    Eigen::Isometry2d get_robot_pose() const {
+        return robot_pose_;
     }
 
     /**
@@ -201,6 +210,12 @@ private:
     //! camera pose: world -> camera
     bool pose_is_valid_ = false;
     Mat44_t pose_cw_;
+
+    //! Velocity
+    Vec3_t vel_;
+
+    //! Robot pose
+    Eigen::Isometry2d robot_pose_;
 
     //! Camera pose
     //! rotation: world -> camera

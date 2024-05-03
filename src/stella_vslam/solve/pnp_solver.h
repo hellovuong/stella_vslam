@@ -7,8 +7,7 @@
 #include <vector>
 #include <random>
 
-namespace stella_vslam {
-namespace solve {
+namespace stella_vslam::solve {
 
 class pnp_solver {
 public:
@@ -141,7 +140,6 @@ private:
     static void estimate_R_and_t(const eigen_alloc_vector<Vec3_t>& pws, const eigen_alloc_vector<Vec3_t>& pcs, Mat33_t& rot, Vec3_t& trans);
 };
 
-} // namespace solve
 } // namespace stella_vslam
 
 #endif // STELLA_VSLAM_SOLVE_PNP_SOLVER_H

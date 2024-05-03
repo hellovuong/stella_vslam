@@ -18,9 +18,7 @@ namespace data {
 class landmark;
 } // namespace data
 
-namespace optimize {
-namespace internal {
-namespace se3 {
+namespace optimize::internal::se3 {
 
 template<typename T>
 class reproj_edge_wrapper {
@@ -264,9 +262,7 @@ inline bool reproj_edge_wrapper<T>::depth_is_positive() const {
     return true;
 }
 
-} // namespace se3
-} // namespace internal
-} // namespace optimize
+} // namespace optimize::internal::se3
 } // namespace stella_vslam
 
 #endif // STELLA_VSLAM_OPTIMIZE_G2O_SE3_REPROJ_EDGE_WRAPPER_H

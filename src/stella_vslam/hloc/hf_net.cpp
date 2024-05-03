@@ -2,6 +2,7 @@
 // Created by vuong on 3/14/23.
 //
 
+#include <opencv2/imgproc.hpp>
 #include "hf_net.h"
 
 namespace stella_vslam::hloc {
@@ -148,8 +149,11 @@ bool hf_net::SaveEngineToFile(const std::string& strEngineSaveFile, nvinfer1::IH
 }
 bool hf_net::compute_global_descriptors(const cv::Mat& img, cv::Mat& globalDescriptors) {
     assert(mEngine);
+    assert(not img.empty());
+    cv::Mat resizedImg;
+    cv::resize(img, resizedImg, cv::Size(mInputShape.d[2], mInputShape.d[1]));
     // prepare input
-    Mat2Tensor(img, input_tensors[0]);
+    Mat2Tensor(resizedImg, input_tensors[0]);
     // infer
     if (!infer()) {
         return false;
@@ -169,7 +173,7 @@ bool hf_net::infer() {
     }
 
     // Memcpy from host input buffers to device input buffers
-    mpBuffers->copyInputToDeviceAsync();
+    mpBuffers->copyInputToDevice();
     bool status = mContext->executeV2(mpBuffers->getDeviceBindings().data());
     if (!status) {
         spdlog::warn("Failed to execute hf");

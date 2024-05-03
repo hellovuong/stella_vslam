@@ -45,6 +45,8 @@ public:
                   eigen_alloc_unord_map<unsigned int, Mat44_t>& keyfrm_to_pose_cw_after_global_BA,
                   bool* const force_stop_flag = nullptr) const;
 
+    bool optimize(const data::map_database* map_db) const;
+
 private:
     //! number of iterations of optimization
     unsigned int num_iter_;

@@ -93,8 +93,7 @@ unsigned int projection::match_frame_and_landmarks(data::frame& frm,
             }
         }
 
-        if ((lm_desc.type() == CV_8U && best_hamm_dist <= HAMMING_DIST_THR_HIGH) or
-            (lm_desc.type() == CV_32F && best_hamm_dist <= HAMMING_L2_DIST_THR_HIGH)) {
+        if ((lm_desc.type() == CV_8U && best_hamm_dist <= HAMMING_DIST_THR_HIGH) or (lm_desc.type() == CV_32F && best_hamm_dist <= HAMMING_L2_DIST_THR_HIGH)) {
             // Lowe's ratio test
             if (lm_desc.type() == CV_8U && best_scale_level == second_best_scale_level && best_hamm_dist > lowe_ratio_ * second_best_hamm_dist) {
                 continue;
@@ -226,8 +225,7 @@ unsigned int projection::match_current_and_last_frames(data::frame& curr_frm, co
                 best_idx = curr_idx;
             }
         }
-        if ((lm_desc.type() == CV_8U && HAMMING_DIST_THR_HIGH < best_hamm_dist) or
-            (lm_desc.type() == CV_32F && HAMMING_L2_DIST_THR_HIGH < best_hamm_dist)) {
+        if ((lm_desc.type() == CV_8U && HAMMING_DIST_THR_HIGH < best_hamm_dist) or (lm_desc.type() == CV_32F && HAMMING_L2_DIST_THR_HIGH < best_hamm_dist)) {
             continue;
         }
         // The matching is valid
@@ -356,7 +354,8 @@ unsigned int projection::match_frame_and_keyframe(const Mat44_t& cam_pose_cw,
         if (static_cast<float>(hamm_dist_thr) < best_hamm_dist) {
             continue;
         }
-
+        if (best_idx >= frm_landmarks.size())
+            continue ;
         // The matching is valid
         frm_landmarks.at(best_idx) = lm;
         num_matches++;
@@ -474,8 +473,7 @@ unsigned int projection::match_by_Sim3_transform(const std::shared_ptr<data::key
             }
         }
 
-        if ((lm_desc.type() == CV_8U && HAMMING_DIST_THR_LOW < best_dist) or
-            (lm_desc.type() == CV_32F && HAMMING_L2_DIST_THR_LOW < best_dist)) {
+        if ((lm_desc.type() == CV_8U && HAMMING_DIST_THR_LOW < best_dist) or (lm_desc.type() == CV_32F && HAMMING_L2_DIST_THR_LOW < best_dist)) {
             continue;
         }
 

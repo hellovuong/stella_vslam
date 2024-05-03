@@ -8,10 +8,14 @@
 #include "stella_vslam/module/frame_tracker.h"
 #include "stella_vslam/optimize/pose_optimizer_g2o.h"
 #include "stella_vslam/match/bruce_force.h"
+#include "stella_vslam/type.h"
 
 #include <spdlog/spdlog.h>
 
+#include <memory>
+#include <opencv2/core/types.hpp>
 #include <utility>
+#include <vector>
 
 namespace stella_vslam::module {
 
@@ -31,18 +35,20 @@ bool frame_tracker::motion_based_track(data::frame& curr_frm, const data::frame&
     curr_frm.erase_landmarks();
 
     // Reproject the 3D points observed in the last frame and find 2D-3D matches
-    const float margin = (camera_->setup_type_ != camera::setup_type_t::Stereo) ? 20 : 10;
-    auto num_matches = projection_matcher.match_current_and_last_frames(curr_frm, last_frm, margin);
-
+    std::vector<cv::DMatch> matches;
+    auto num_matches = sg_matcher_->match_current_and_last_frames(curr_frm, last_frm, matches);
     if (num_matches < num_matches_thr_) {
-        // Increment the margin, and search again
-        curr_frm.erase_landmarks();
-        num_matches = projection_matcher.match_current_and_last_frames(curr_frm, last_frm, 2 * margin);
+        spdlog::debug("motion based tracking: {} matches < {}", num_matches, num_matches_thr_);
     }
+
+    return true;
 
     if (num_matches < num_matches_thr_) {
         spdlog::debug("motion based tracking failed: {} matches < {}", num_matches, num_matches_thr_);
         return false;
+    }
+    else {
+        return true;
     }
 
     // Pose optimization
@@ -63,7 +69,8 @@ bool frame_tracker::motion_based_track(data::frame& curr_frm, const data::frame&
     }
 }
 
-bool frame_tracker::bow_match_based_track(data::frame& curr_frm, const data::frame& last_frm, const std::shared_ptr<data::keyframe>& ref_keyfrm) const {
+bool frame_tracker::bow_match_based_track(data::frame& curr_frm, const data::frame& last_frm,
+                                          const std::shared_ptr<data::keyframe>& ref_keyfrm) const {
     // Search 2D-2D matches between the ref keyframes and the current frame
     // to acquire 2D-3D matches between the frame keypoints and 3D points observed in the ref keyframe
     std::vector<std::shared_ptr<data::landmark>> matched_lms_in_curr;
@@ -71,6 +78,9 @@ bool frame_tracker::bow_match_based_track(data::frame& curr_frm, const data::fra
     if (curr_frm.frm_obs_.descriptors_.type() == CV_32F) {
         std::vector<cv::DMatch> best_matches;
         num_matches = sg_matcher_->match(ref_keyfrm, curr_frm, matched_lms_in_curr, best_matches);
+        match::sg_matcher::drawMatches(ref_keyfrm->img.clone(), curr_img_.clone(),
+                                       ref_keyfrm->frm_obs_.undist_keypts_, curr_frm.frm_obs_.undist_keypts_,
+                                       best_matches);
     }
     else if (curr_frm.frm_obs_.descriptors_.type() == CV_8U) {
         match::bow_tree bow_matcher(0.7, true);
@@ -100,6 +110,41 @@ bool frame_tracker::bow_match_based_track(data::frame& curr_frm, const data::fra
 
     if (num_valid_matches < num_matches_thr_) {
         spdlog::debug("bow match based tracking failed: {} inlier matches < {}", num_valid_matches, num_matches_thr_);
+        return false;
+    }
+    else {
+        return true;
+    }
+}
+
+bool frame_tracker::roboust_tracking(data::frame& curr_frm, const std::shared_ptr<data::keyframe>& ref_keyfrm) {
+    std::vector<cv::DMatch> best_matches;
+    std::vector<std::shared_ptr<data::landmark>> matched_lms_in_curr;
+    auto num_matches = sg_matcher_->match(ref_keyfrm, curr_frm, matched_lms_in_curr, best_matches);
+    if (num_matches < num_matches_thr_) {
+        spdlog::warn("frame_tracker::roboust_tracking: {} matches < {}", num_matches, num_matches_thr_);
+        return false;
+    }
+    std::map<int, int> frame_keyfrm_matches;
+
+    for (const auto& match : best_matches) {
+        if (match.distance < 0) {
+            continue;
+        }
+        frame_keyfrm_matches.insert({match.trainIdx, match.queryIdx});
+    }
+
+    curr_frm.set_landmarks(matched_lms_in_curr);
+    Mat44_t optimized_pose;
+    std::vector<bool> outlier_flags;
+    // Bundle Adjustment
+    auto opt = std::static_pointer_cast<optimize::pose_optimizer_g2o>(pose_optimizer_);
+    opt->bundle_adjustment(curr_frm, ref_keyfrm.get(), frame_keyfrm_matches, optimized_pose, outlier_flags);
+    // Discard the outliers
+    const auto num_valid_matches = discard_outliers(outlier_flags, curr_frm);
+
+    if (num_valid_matches < num_matches_thr_) {
+        spdlog::debug("robust tracking failed: {} inlier matches < {}", num_valid_matches, num_matches_thr_);
         return false;
     }
     else {

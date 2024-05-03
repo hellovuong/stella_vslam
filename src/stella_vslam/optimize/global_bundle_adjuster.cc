@@ -333,5 +333,12 @@ bool global_bundle_adjuster::optimize(const std::vector<std::shared_ptr<data::ke
     return true;
 }
 
+bool global_bundle_adjuster::optimize(const data::map_database* map_db) const {
+    auto keyfrms = map_db->get_all_keyframes();
+    auto lms = map_db->get_all_landmarks();
+    optimize_for_initialization(keyfrms, lms, {});
+    return true;
+}
+
 } // namespace optimize
 } // namespace stella_vslam

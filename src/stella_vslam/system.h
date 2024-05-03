@@ -145,8 +145,10 @@ public:
 
     //! Feed an RGBD frame to SLAM system
     //! (Note: RGB and Depth images must be aligned)
-    data::frame create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& depthmap, const double timestamp, const cv::Mat& mask);
-    std::shared_ptr<Mat44_t> feed_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& depthmap, const double timestamp, const cv::Mat& mask = cv::Mat{});
+    data::frame create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& depthmap, const double timestamp, const cv::Mat& mask,
+                                  const Eigen::Isometry2d& robot_pose = {}, const Vec3_t& vel = Vec3_t{});
+    std::shared_ptr<Mat44_t> feed_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& depthmap, const double timestamp, const Eigen::Isometry2d& robot_pose = {},
+                                             const Vec3_t& vel = Vec3_t{}, const cv::Mat& mask = cv::Mat{});
 
     //-----------------------------------------
     // pose initializing/updating

@@ -18,6 +18,7 @@
 #include "stella_vslam/io/map_database_io_factory.h"
 #include "stella_vslam/publish/map_publisher.h"
 #include "stella_vslam/publish/frame_publisher.h"
+#include "stella_vslam/type.h"
 #include "stella_vslam/util/converter.h"
 #include "stella_vslam/util/image_converter.h"
 #include "stella_vslam/util/yaml.h"
@@ -369,7 +370,8 @@ data::frame system::create_stereo_frame(const cv::Mat& left_img, const cv::Mat& 
     return data::frame(timestamp, camera_, orb_params_, frm_obs, std::move(markers_2d));
 }
 
-data::frame system::create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& depthmap, const double timestamp, const cv::Mat& mask) {
+data::frame system::create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& depthmap, const double timestamp, const cv::Mat& mask,
+                                      const Eigen::Isometry2d& robot_pose, const Vec3_t& vel) {
     // color and depth scale conversion
     if (!camera_->is_valid_shape(rgb_img)) {
         spdlog::warn("preprocess: Input image size is invalid");
@@ -381,8 +383,6 @@ data::frame system::create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& dep
     cv::Mat img_depth = depthmap;
     util::convert_to_grayscale(img_gray, camera_->color_order_);
     util::convert_to_true_depth(img_depth, depthmap_factor_);
-    cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
-    clahe->apply(img_gray, img_gray);
     data::frame_observation frm_obs;
 
     // Extract ORB feature
@@ -430,7 +430,7 @@ data::frame system::create_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& dep
         marker_detector_->detect(img_gray, markers_2d);
     }
 
-    return data::frame(timestamp, camera_, orb_params_, frm_obs, std::move(markers_2d));
+    return data::frame(timestamp, camera_, orb_params_, frm_obs, std::move(markers_2d), robot_pose, vel);
 }
 
 std::shared_ptr<Mat44_t> system::feed_monocular_frame(const cv::Mat& img, const double timestamp, const cv::Mat& mask) {
@@ -451,16 +451,20 @@ std::shared_ptr<Mat44_t> system::feed_stereo_frame(const cv::Mat& left_img, cons
     return feed_frame(create_stereo_frame(left_img, right_img, timestamp, mask), left_img);
 }
 
-std::shared_ptr<Mat44_t> system::feed_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& depthmap, const double timestamp, const cv::Mat& mask) {
+std::shared_ptr<Mat44_t> system::feed_RGBD_frame(const cv::Mat& rgb_img, const cv::Mat& depthmap, const double timestamp,
+                                                 const Eigen::Isometry2d& robot_pose, const Vec3_t& vel, const cv::Mat& mask) {
     assert(camera_->setup_type_ == camera::setup_type_t::RGBD);
     if (rgb_img.empty() || depthmap.empty()) {
         spdlog::warn("preprocess: empty image");
         return nullptr;
     }
-    return feed_frame(create_RGBD_frame(rgb_img, depthmap, timestamp, mask), rgb_img);
+    return feed_frame(create_RGBD_frame(rgb_img, depthmap, timestamp, mask, robot_pose, vel), rgb_img);
 }
 
 std::shared_ptr<Mat44_t> system::feed_frame(const data::frame& frm, const cv::Mat& img) {
+    if (not frm.frm_obs_.num_keypts_) {
+        return {};
+    }
     check_reset_request();
 
     tracker_->curr_img_ = img.clone();

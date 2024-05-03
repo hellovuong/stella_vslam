@@ -35,6 +35,7 @@ foreach(SOURCE_PATH ${SOURCE_PATHS})
     target_include_directories(${TEST_EXECUTABLE_NAME} SYSTEM
                                PRIVATE
                                ${PROJECT_SOURCE_DIR}/src
+                               ${PROJECT_SOURCE_DIR}/example
                                ${googletest_SOURCE_DIR}/googletest/include)
     target_link_libraries(${TEST_EXECUTABLE_NAME}
                           PRIVATE

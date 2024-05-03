@@ -6,6 +6,7 @@
 #include <yaml-cpp/yaml.h>
 #include <spdlog/spdlog.h>
 #include "stella_vslam/hloc/hf_net.h"
+#include "stella_vslam/type.h"
 
 namespace stella_vslam::util {
 
@@ -17,6 +18,8 @@ std::vector<std::vector<float>> get_rectangles(const YAML::Node& node);
 
 hloc::hfnet_params gen_hf_params(const YAML::Node& node);
 
-} // namespace stella_vslam
+stella_vslam::Mat44_t get_Mat44(const YAML::Node& node);
+
+} // namespace stella_vslam::util
 
 #endif // STELLA_VSLAM_UTIL_YAML_H

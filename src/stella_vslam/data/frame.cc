@@ -5,6 +5,7 @@
 #include "stella_vslam/feature/orb_extractor.h"
 #include "stella_vslam/match/stereo.h"
 #include "stella_vslam/hloc/hf_net.h"
+#include "stella_vslam/type.h"
 #include <thread>
 
 #include <spdlog/spdlog.h>
@@ -14,11 +15,11 @@ namespace stella_vslam::data {
 std::atomic<unsigned int> frame::next_id_{0};
 
 frame::frame(const double timestamp, camera::base* camera, feature::orb_params* orb_params,
-             const frame_observation frm_obs, const std::unordered_map<unsigned int, marker2d>& markers_2d)
+             const frame_observation frm_obs, const std::unordered_map<unsigned int, marker2d>& markers_2d, const Eigen::Isometry2d& robot_pose, const Vec3_t& vel)
     : id_(next_id_++), timestamp_(timestamp), camera_(camera), orb_params_(orb_params), frm_obs_(frm_obs),
       markers_2d_(markers_2d),
       // Initialize association with 3D points
-      landmarks_(std::vector<std::shared_ptr<landmark>>(frm_obs_.num_keypts_, nullptr)) {}
+      landmarks_(std::vector<std::shared_ptr<landmark>>(frm_obs_.num_keypts_, nullptr)), vel_(vel), robot_pose_(robot_pose) {}
 
 void frame::set_pose_cw(const Mat44_t& pose_cw) {
     pose_is_valid_ = true;
@@ -146,4 +147,4 @@ bool frame::representation_is_available(data::place_recognition_t type) const {
     }
 }
 
-} // namespace stella_vslam
+} // namespace stella_vslam::data

@@ -78,7 +78,7 @@ void loop_bundle_adjuster::optimize(const std::shared_ptr<data::keyframe>& curr_
             const Mat44_t cam_pose_wp = parent->get_pose_wc();
 
             const auto children = parent->graph_node_->get_spanning_children();
-            for (auto child : children) {
+            for (const auto& child : children) {
                 if (!optimized_keyfrm_ids.count(child->id_)) {
                     // if `child` is NOT optimized by the loop BA
                     // propagate the pose correction from the spanning parent

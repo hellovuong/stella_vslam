@@ -1,4 +1,5 @@
 #include "stella_vslam/util/yaml.h"
+#include "stella_vslam/type.h"
 
 namespace stella_vslam::util {
 
@@ -30,4 +31,11 @@ hloc::hfnet_params gen_hf_params(const YAML::Node& node) {
     return result;
 }
 
-} // namespace stella_vslam
+stella_vslam::Mat44_t get_Mat44(const YAML::Node& node) {
+    if (node)
+        return Eigen::Map<Eigen::Matrix<double, 4, 4, Eigen::RowMajor>>(node.as<std::vector<double>>().data());
+    else
+        return {};
+}
+
+} // namespace stella_vslam::util

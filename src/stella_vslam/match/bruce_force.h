@@ -36,7 +36,19 @@ public:
                         std::vector<std::shared_ptr<data::landmark>>& matched_lms_in_frm,
                         std::vector<cv::DMatch>& best_matches);
 
+    size_t match_current_and_last_frames(data::frame& curr_frm, const data::frame& last_frm,
+                                         std::vector<cv::DMatch>& best_matches) const;
+
+    /**
+     * For debug only
+     * @param reloc_candidates
+     */
+    [[maybe_unused]] static void drawMatches(const cv::Mat& img1, const cv::Mat& img2,
+                                             const std::vector<cv::KeyPoint>& undist_keypts_1, const std::vector<cv::KeyPoint>& undist_keypts_2,
+                                             const std::vector<cv::DMatch>& matches_result);
+
     std::shared_ptr<SuperGlue> superGlue;
+
 };
 } // namespace match
 } // namespace stella_vslam

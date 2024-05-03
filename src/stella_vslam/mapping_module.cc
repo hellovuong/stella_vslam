@@ -14,7 +14,7 @@
 #include "stella_vslam/module/local_map_cleaner.h"
 #include "stella_vslam/optimize/local_bundle_adjuster_factory.h"
 #include "stella_vslam/solve/essential_solver.h"
-
+#include "stella_vslam/optimize/global_bundle_adjuster.h"
 #include <thread>
 
 #include <spdlog/spdlog.h>

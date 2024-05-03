@@ -61,6 +61,24 @@ cv::Mat frame_publisher::draw_frame() {
     switch (tracking_state) {
         case tracker_state_t::Tracking: {
             num_tracked = draw_tracked_points(img, curr_keypts, curr_lms, mapping_is_enabled, mag);
+            cv::putText(img,                         // target image
+                        "Tracking",                  // text
+                        cv::Point(10, img.rows / 2), // top-left position
+                        cv::FONT_HERSHEY_DUPLEX,
+                        1.0,
+                        CV_RGB(118, 185, 0), // font color
+                        2);
+            break;
+        }
+        case tracker_state_t::Unstable: {
+            num_tracked = draw_tracked_points(img, curr_keypts, curr_lms, mapping_is_enabled, mag);
+            cv::putText(img,                         // target image
+                        "Unstable",                  // text
+                        cv::Point(10, img.rows / 2), // top-left position
+                        cv::FONT_HERSHEY_DUPLEX,
+                        1.0,
+                        CV_RGB(118, 185, 0), // font color
+                        2);
             break;
         }
         default: {

@@ -22,7 +22,7 @@ unsigned int fuse::detect_duplication(const std::shared_ptr<data::keyframe>& key
     std::unordered_set<unsigned int> already_matched_idx_in_keyfrm;
 
     duplicated_lms_in_keyfrm.clear();
-
+    bool warning = false;
     for (auto& lm : landmarks_to_check) {
         if (!lm) {
             continue;
@@ -95,8 +95,13 @@ unsigned int fuse::detect_duplication(const std::shared_ptr<data::keyframe>& key
 
             const auto scale_level = static_cast<unsigned int>(undist_keypt.octave);
 
-            // TODO: shoud determine the scale with 'keyfrm-> get_keypts_in_cell ()'
+            // TODO: should determine the scale with 'keyfrm-> get_keypts_in_cell ()'
             if (scale_level + 1 < pred_scale_level || pred_scale_level < scale_level) {
+                if (not warning)
+                {
+                    spdlog::debug("Skip due to scale diff");
+                    warning = true;
+                }
                 continue;
             }
 
@@ -133,9 +138,10 @@ unsigned int fuse::detect_duplication(const std::shared_ptr<data::keyframe>& key
             float hamm_dist;
             if (desc.type() == CV_8U)
                 hamm_dist = static_cast<float>(compute_descriptor_distance_32(lm_desc, desc));
-            else
+            else if (desc.type() == CV_32F)
                 hamm_dist = compute_descriptor_distance_l2(lm_desc, desc);
-
+            else
+                assert(-1);
             if (hamm_dist < best_dist) {
                 best_dist = hamm_dist;
                 best_idx = idx;

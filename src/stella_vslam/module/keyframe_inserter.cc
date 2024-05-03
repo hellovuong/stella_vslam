@@ -84,6 +84,8 @@ bool keyframe_inserter::new_keyframe_is_needed(data::map_database* map_db,
     // and concurrently the ratio of the reliable 3D points larger than the threshold ratio
     constexpr unsigned int num_tracked_lms_thr_unstable = 15;
     bool tracking_is_unstable = num_tracked_lms < num_tracked_lms_thr_unstable;
+    if (tracking_is_unstable)
+        return true;
     bool almost_all_lms_are_tracked = num_reliable_lms > num_reliable_lms_ref * lms_ratio_thr_almost_all_lms_are_tracked_;
     SPDLOG_TRACE("keyframe_inserter: num_reliable_lms_ref={}", num_reliable_lms_ref);
     SPDLOG_TRACE("keyframe_inserter: num_reliable_lms={}", num_reliable_lms);

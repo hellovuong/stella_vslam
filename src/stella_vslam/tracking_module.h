@@ -36,6 +36,7 @@ class hf_net;
 enum class tracker_state_t {
     Initializing,
     Tracking,
+    Unstable,
     Lost
 };
 
@@ -139,6 +140,22 @@ public:
     data::frame curr_frm_;
     cv::Mat curr_img_;
 
+    //! Converter from robot velocity  to camera twist
+    // robot pose to camera pose
+    static Mat44_t robot_pose_to_camera_pose(const Eigen::Isometry2d& Twb1, const Eigen::Isometry2d& Twb2, const Mat44_t& Tbc);
+    static Mat44_t robot_to_cam_twist(const Mat44_t& Twc1, const Mat44_t& Tbc, const Vec3_t& robot_vel, const double ts);
+
+    //! Estimate robot pose by velcity model
+    static Mat44_t estimation_robot_pose_vel_model(const Mat44_t& prev_pose, const Vec3_t& robot_vel, const double ts);
+
+    //! Estimate robot pose by velcity model
+    static Mat44_t estimation_robot_pose_vel_model_2(const Mat44_t& prev_pose, const Vec3_t& robot_vel, const double ts);
+    //! camera pose to robot pose
+    static Mat44_t convert_to_robot_pose(const Mat44_t& camera_pose, const Mat44_t& Tbc);
+
+    //! robot pose to camera pose
+    static Mat44_t convert_to_camera(const Mat44_t& robot_pose, const Mat44_t& Tbc);
+
 protected:
     //-----------------------------------------
     // tracking processes
@@ -204,7 +221,7 @@ protected:
     module::relocalizer relocalizer_;
 
     //! frame tracker for current frame
-    const module::frame_tracker frame_tracker_;
+    module::frame_tracker frame_tracker_;
 
     //! keyframe inserter
     module::keyframe_inserter keyfrm_inserter_;
@@ -227,6 +244,8 @@ protected:
 
     //! motion model
     Mat44_t twist_;
+    Mat44_t Tbc_;
+
     //! motion model is valid or not
     bool twist_is_valid_ = false;
 
@@ -265,6 +284,8 @@ protected:
 
     //-----------------------------------------
     // force relocalization
+    //! frame timestamp that tracking start to unstable
+    float unstable_timestamp = 0.f;
 
     //! Mutex for update pose request into given position
     mutable std::mutex mtx_relocalize_by_pose_request_;

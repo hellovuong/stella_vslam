@@ -435,7 +435,7 @@ void landmark::increase_num_observed(unsigned int num_observed) {
 
 float landmark::get_observed_ratio() const {
     std::lock_guard<std::mutex> lock(mtx_observations_);
-    return static_cast<float>(num_observed_) / num_observable_;
+    return static_cast<float>(num_observed_) / (float)num_observable_;
 }
 
 unsigned int landmark::get_num_observed() const {

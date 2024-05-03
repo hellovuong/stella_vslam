@@ -140,19 +140,19 @@ bool relocalizer::relocalize_by_pnp_solver(data::frame& curr_frm,
                                            std::vector<std::shared_ptr<data::landmark>>& matched_landmarks) const {
     size_t num_matches;
     std::vector<cv::DMatch> match_result;
-    if (curr_frm.frm_obs_.descriptors_.type() == CV_8U) {
-        num_matches = use_robust_matcher ? robust_matcher_.match_frame_and_keyframe(curr_frm, candidate_keyfrm, matched_landmarks)
-                                         : bow_matcher_.match_frame_and_keyframe(candidate_keyfrm, curr_frm, matched_landmarks);
-    }
-    else {
-        num_matches = sg_matcher_->match(candidate_keyfrm, curr_frm, matched_landmarks, match_result);
-    }
+    // if (curr_frm.frm_obs_.descriptors_.type() == CV_8U) {
+    //     num_matches = use_robust_matcher ? robust_matcher_.match_frame_and_keyframe(curr_frm, candidate_keyfrm, matched_landmarks)
+    //                                      : bow_matcher_.match_frame_and_keyframe(candidate_keyfrm, curr_frm, matched_landmarks);
+    // }
+    // else {
+    num_matches = sg_matcher_->match(candidate_keyfrm, curr_frm, matched_landmarks, match_result);
+    // }
     // Discard the candidate if the number of 2D-3D matches is less than the threshold
     if (num_matches < min_num_bow_matches_) {
         return false;
     }
 
-    drawMatches(curr_img_, candidate_keyfrm->img.clone(), curr_frm.frm_obs_.undist_keypts_, candidate_keyfrm->frm_obs_.undist_keypts_, match_result);
+    drawMatches(candidate_keyfrm->img.clone(), curr_img_, candidate_keyfrm->frm_obs_.undist_keypts_, curr_frm.frm_obs_.undist_keypts_, match_result);
 
     // Set up an PnP solver with the current 2D-3D matches
     const auto valid_indices = extract_valid_indices(matched_landmarks);
@@ -161,10 +161,10 @@ bool relocalizer::relocalize_by_pnp_solver(data::frame& curr_frm,
 
     // 1. Estimate the camera pose using EPnP (+ RANSAC)
     spdlog::debug("1. Estimate the camera pose using EPnP (+ RANSAC)");
-    spdlog::debug("- valid / total : {} / {}", valid_indices.size(), matched_landmarks.size());
+    spdlog::debug("- valid / total : {} / {}", valid_indices.size(), num_matches);
     pnp_solver->find_via_ransac(30, false);
     if (!pnp_solver->solution_is_valid()) {
-        spdlog::debug("solution is not valid. candidate keyframe id is {}", candidate_keyfrm->id_);
+        spdlog::debug("- solution is not valid. candidate keyframe id is {}", candidate_keyfrm->id_);
         return false;
     }
 
@@ -251,8 +251,10 @@ bool relocalizer::refine_pose(data::frame& curr_frm,
 
     // Discard if falling below the threshold
     if (num_valid_obs2 < min_num_valid_obs_) {
-        spdlog::debug("relocalizer::refine_pose: Number of observatoins ({}) < threshold ({}). "
-            "candidate keyframe id is {}", num_valid_obs2, min_num_valid_obs_, candidate_keyfrm->id_);
+        spdlog::debug(
+            "relocalizer::refine_pose: Number of observatoins ({}) < threshold ({}). "
+            "candidate keyframe id is {}",
+            num_valid_obs2, min_num_valid_obs_, candidate_keyfrm->id_);
         return false;
     }
 
@@ -410,8 +412,8 @@ std::unique_ptr<solve::pnp_solver> relocalizer::setup_pnp_solver(const std::vect
     cv::imwrite("relocalized candidates", show_img);
 }
 [[maybe_unused]] void relocalizer::drawMatches(const cv::Mat& img1, const cv::Mat& img2,
-                              const std::vector<cv::KeyPoint>& undist_keypts_1, const std::vector<cv::KeyPoint>& undist_keypts_2,
-                              const std::vector<cv::DMatch>& matches) {
+                                               const std::vector<cv::KeyPoint>& undist_keypts_1, const std::vector<cv::KeyPoint>& undist_keypts_2,
+                                               const std::vector<cv::DMatch>& matches) {
     cv::Mat show_img;
     cv::drawMatches(img1, undist_keypts_1, img2, undist_keypts_2, matches, show_img);
     cv::imwrite("matches_w_candidates.png", show_img);

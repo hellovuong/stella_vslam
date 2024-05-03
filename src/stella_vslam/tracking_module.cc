@@ -10,12 +10,17 @@
 #include "stella_vslam/match/projection.h"
 #include "stella_vslam/module/local_map_updater.h"
 #include "stella_vslam/optimize/pose_optimizer_factory.h"
+#include "stella_vslam/type.h"
 #include "stella_vslam/util/yaml.h"
-
+#include "stella_vslam/util/geometry.h"
 #include <chrono>
+#include <iterator>
 #include <unordered_map>
 #include <utility>
 
+#include <Eigen/src/Geometry/Rotation2D.h>
+#include <Eigen/src/Geometry/Transform.h>
+#include <se3quat.h>
 #include <spdlog/spdlog.h>
 
 namespace stella_vslam {
@@ -32,7 +37,8 @@ tracking_module::tracking_module(const std::shared_ptr<config>& cfg, camera::bas
       pose_optimizer_(optimize::pose_optimizer_factory::create(util::yaml_optional_ref(cfg->yaml_node_, "Tracking"))),
       relocalizer_(pose_optimizer_, util::yaml_optional_ref(cfg->yaml_node_, "Relocalizer")),
       frame_tracker_(camera_, pose_optimizer_, 10, initializer_.get_use_fixed_seed(), relocalizer_.getSgMatcher()),
-      keyfrm_inserter_(util::yaml_optional_ref(cfg->yaml_node_, "KeyframeInserter")) {
+      keyfrm_inserter_(util::yaml_optional_ref(cfg->yaml_node_, "KeyframeInserter")),
+      Tbc_(util::get_Mat44((util::yaml_optional_ref(cfg->yaml_node_, "Odometry")["Tbc"]))) {
     spdlog::debug("CONSTRUCT: tracking_module");
 }
 
@@ -138,20 +144,31 @@ std::shared_ptr<Mat44_t> tracking_module::feed_frame(data::frame curr_frm) {
     mapping_lock.unlock();
 #endif
 
+    bool need_new_kf_after_unstable = false;
     // state transition
+    // Initializing -> Tracking -> Unstable -> Lost
     if (succeeded) {
+        if (tracking_state_ == tracker_state_t::Unstable)
+            need_new_kf_after_unstable = true;
         tracking_state_ = tracker_state_t::Tracking;
     }
     else if (tracking_state_ == tracker_state_t::Tracking) {
-        tracking_state_ = tracker_state_t::Lost;
-
-        spdlog::info("tracking lost: frame {}", curr_frm_.id_);
+        tracking_state_ = tracker_state_t::Unstable;
+        unstable_timestamp = static_cast<float>(curr_frm_.timestamp_);
+    }
+    else if (tracking_state_ == tracker_state_t::Unstable) {
         // if tracking is failed within 5.0 sec after initialization, reset the system
         constexpr float init_retry_thr = 5.0;
         if (!mapper_->is_paused() && curr_frm_.timestamp_ - initializer_.get_initial_frame_timestamp() < init_retry_thr) {
             spdlog::info("tracking lost within {} sec after initialization", init_retry_thr);
             reset();
             return nullptr;
+        }
+        // Unstable for a long time 60s -> Lost
+        if ((float)curr_frm_.timestamp_ - unstable_timestamp > 30.f) {
+            spdlog::info("tracking is unstable for more than {}", 30.f);
+            tracking_state_ = tracker_state_t::Lost;
+            spdlog::info("tracking lost: frame {}", curr_frm_.id_);
         }
     }
 
@@ -218,21 +235,22 @@ bool tracking_module::track(bool relocalization_is_needed) {
     const unsigned int min_num_obs_thr = (3 <= map_db_->get_num_keyframes()) ? 3 : 2;
     unsigned int num_tracked_lms = 0;
     unsigned int num_reliable_lms = 0;
-    if (succeeded) {
-        SPDLOG_TRACE("tracking_module: update_local_map (curr_frm_={})", curr_frm_.id_);
-        update_local_map();
+    SPDLOG_TRACE("tracking_module: update_local_map (curr_frm_={})", curr_frm_.id_);
+    update_local_map();
+    if (succeeded and tracking_state_ == tracker_state_t::Tracking) {
         SPDLOG_TRACE("tracking_module: optimize_current_frame_with_local_map (curr_frm_={})", curr_frm_.id_);
         succeeded = optimize_current_frame_with_local_map(num_tracked_lms, num_reliable_lms, min_num_obs_thr);
     }
 
     // update the motion model
-    if (succeeded) {
+    if (succeeded or tracking_state_ == tracker_state_t::Unstable) {
         SPDLOG_TRACE("tracking_module: update_motion_model (curr_frm_={})", curr_frm_.id_);
         update_motion_model();
     }
 
     // check to insert the new keyframe derived from the current frame
-    if (succeeded && !is_stopped_keyframe_insertion_ && new_keyframe_is_needed(num_tracked_lms, num_reliable_lms, min_num_obs_thr)) {
+    if ((succeeded && !is_stopped_keyframe_insertion_ && new_keyframe_is_needed(num_tracked_lms, num_reliable_lms, min_num_obs_thr))
+        or (tracking_state_ == tracker_state_t::Unstable and succeeded)) {
         SPDLOG_TRACE("tracking_module: insert_new_keyframe (curr_frm_={})", curr_frm_.id_);
         insert_new_keyframe();
     }
@@ -280,14 +298,15 @@ bool tracking_module::track_current_frame() {
 
     // Tracking mode
     if (twist_is_valid_ && last_reloc_frm_id_ + 2 < curr_frm_.id_) {
-        // if the motion model is valid
-        succeeded = frame_tracker_.motion_based_track(curr_frm_, last_frm_, twist_);
+        auto twist = robot_pose_to_camera_pose(last_frm_.get_robot_pose(), curr_frm_.get_robot_pose(), Tbc_);
+        succeeded = frame_tracker_.motion_based_track(curr_frm_, last_frm_, twist);
     }
     if (!succeeded) {
         // Compute the representations to perform the BoW match
-        if (!curr_frm_.representation_is_available(vpr_db_->database_type)) {
+        if (vpr_db_->database_type == data::place_recognition_type::BoW and !curr_frm_.representation_is_available(vpr_db_->database_type)) {
             vpr_db_->computeRepresentation(curr_frm_, curr_img_.clone());
         }
+        frame_tracker_.curr_img_ = curr_img_.clone();
         succeeded = frame_tracker_.bow_match_based_track(curr_frm_, last_frm_, curr_frm_.ref_keyfrm_);
     }
     if (!succeeded) {
@@ -388,8 +407,10 @@ bool tracking_module::optimize_current_frame_with_local_map(unsigned int& num_tr
     // optimize the pose
     Mat44_t optimized_pose;
     std::vector<bool> outlier_flags;
-    pose_optimizer_->optimize(curr_frm_, optimized_pose, outlier_flags);
-    curr_frm_.set_pose_cw(optimized_pose);
+    if (tracking_state_ == tracker_state_t::Tracking) {
+        pose_optimizer_->optimize(curr_frm_, optimized_pose, outlier_flags);
+        curr_frm_.set_pose_cw(optimized_pose);
+    }
 
     // Reject outliers
     for (unsigned int idx = 0; idx < curr_frm_.frm_obs_.num_keypts_; ++idx) {
@@ -537,7 +558,7 @@ void tracking_module::search_local_landmarks() {
 bool tracking_module::new_keyframe_is_needed(unsigned int num_tracked_lms,
                                              unsigned int num_reliable_lms,
                                              const unsigned int min_num_obs_thr) const {
-    // cannnot insert the new keyframe in a second after relocalization
+    // cannot insert the new keyframe in a second after relocalization
     if (curr_frm_.timestamp_ < last_reloc_frm_timestamp_ + 1.0) {
         return false;
     }
@@ -626,6 +647,83 @@ bool tracking_module::pause_if_requested() {
     else {
         return false;
     }
+}
+
+Mat44_t tracking_module::robot_pose_to_camera_pose(const Eigen::Isometry2d& Twb1, const Eigen::Isometry2d& Twb2, const Mat44_t& Tbc) {
+    auto Tb21 = Twb1.inverse() * Twb2;
+    Eigen::Matrix4d Tb21_mat = Eigen::Matrix4d::Identity();
+    Tb21_mat.block<2, 2>(0, 0) = Tb21.rotation().matrix();
+    Tb21_mat.col(3).x() = Tb21.translation().x();
+    Tb21_mat.col(3).y() = Tb21.translation().y();
+
+    return convert_to_camera(Tb21_mat, Tbc);
+}
+
+Mat44_t tracking_module::robot_to_cam_twist(const Mat44_t& Twc1, const Mat44_t& Tbc, const Vec3_t& robot_vel, const double ts) {
+    // 1 - last_frm; 2 - curr_frm
+    auto Twb1 = convert_to_robot_pose(Twc1, Tbc);
+    // auto Twb2 = estimation_robot_pose_vel_model(Twb1, robot_vel, ts);
+    auto Twb2 = estimation_robot_pose_vel_model_2(Twb1, robot_vel, ts);
+    auto Twc2 = convert_to_camera(Twb2, Tbc);
+    auto T_c_12 = Twc1.inverse() * Twc2;
+    return T_c_12;
+}
+Mat44_t tracking_module::estimation_robot_pose_vel_model_2(const Mat44_t& prev_pose, const Vec3_t& robot_vel, const double dt) {
+    Eigen::Quaterniond rot_3d = Eigen::Quaterniond(prev_pose.block<3, 3>(0, 0)).normalized();
+    auto theta = util::geometry::get_yaw(rot_3d);
+
+    auto linear_vel_x = robot_vel.x();
+    auto linear_vel_y = robot_vel.y();
+    auto omega = robot_vel.z();
+
+    auto x_current_est = prev_pose.col(3).x() + dt * (linear_vel_x * cos(theta) - linear_vel_y * sin(theta));
+    auto y_current_est = prev_pose.col(3).y() + dt * (linear_vel_x * sin(theta) + linear_vel_y * cos(theta));
+    auto angle_current_est = theta + omega * dt;
+
+    Mat44_t robot_curr_pose = Mat44_t::Identity();
+    robot_curr_pose.block<2, 2>(0, 0) = Eigen::Rotation2Dd(angle_current_est).toRotationMatrix();
+    robot_curr_pose.col(3).x() = x_current_est;
+    robot_curr_pose.col(3).y() = y_current_est;
+    robot_curr_pose.col(3).z() = prev_pose.col(3).z();
+    return robot_curr_pose;
+}
+
+Mat44_t tracking_module::estimation_robot_pose_vel_model(const Mat44_t& prev_pose, const Vec3_t& robot_vel, const double dt) {
+    // std::cout << "prev robot pose\n"
+    //           << prev_pose << std::endl;
+    auto d_angle = robot_vel.z() * dt;
+
+    Eigen::Matrix3d rot_3d = prev_pose.block<3, 3>(0, 0);
+    auto rpy = rot_3d.eulerAngles(2, 1, 0);
+    auto theta = rpy.z();
+    auto sin_theta = std::sin(theta);
+    auto cos_theta = std::cos(theta);
+    auto sin_theta_d_angle = std::sin(theta + d_angle);
+    auto cos_theta_d_angle = std::cos(theta + d_angle);
+
+    auto factor = robot_vel.x() / robot_vel.z();
+
+    auto x_current_est = prev_pose.col(3).x() + factor * (-sin_theta + sin_theta_d_angle);
+    auto y_current_est = prev_pose.col(3).y() + factor * (cos_theta - cos_theta_d_angle);
+    auto angle_current_est = theta + d_angle;
+
+    // std::cout << "est: " << x_current_est << " " << y_current_est << " " << angle_current_est << std::endl;
+
+    Mat44_t robot_curr_pose = Mat44_t::Identity();
+
+    robot_curr_pose.block<2, 2>(0, 0) = Eigen::Rotation2Dd(angle_current_est).toRotationMatrix();
+    robot_curr_pose.col(3).x() = x_current_est;
+    robot_curr_pose.col(3).y() = y_current_est;
+
+    // std::cout << "current robot est:\n"
+    //           << robot_curr_pose << std::endl;
+    return robot_curr_pose;
+}
+Mat44_t tracking_module::convert_to_robot_pose(const Mat44_t& camera_pose, const Mat44_t& Tbc) {
+    return Tbc * camera_pose * Tbc.inverse();
+}
+Mat44_t tracking_module::convert_to_camera(const Mat44_t& robot_pose, const Mat44_t& Tbc) {
+    return Tbc.inverse() * robot_pose * Tbc;
 }
 
 } // namespace stella_vslam

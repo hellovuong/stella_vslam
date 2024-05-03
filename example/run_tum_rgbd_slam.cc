@@ -207,7 +207,7 @@ int rgbd_tracking(const std::shared_ptr<stella_vslam::system>& slam,
 
             if (!rgb_img.empty() && !depth_img.empty() && (i % frame_skip == 0)) {
                 // input the current frame and estimate the camera pose
-                slam->feed_RGBD_frame(rgb_img, depth_img, frame.timestamp_);
+                slam->feed_RGBD_frame(rgb_img, depth_img, frame.timestamp_, frame.robot_pose_, frame.velocity_);
             }
 
             const auto tp_2 = std::chrono::steady_clock::now();

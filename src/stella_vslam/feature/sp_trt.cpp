@@ -308,7 +308,7 @@ bool sp_trt::process_output(
 }
 
 [[maybe_unused]] void sp_trt::visualization(const std::string& image_name,
-                           const cv::Mat& image) {
+                                            const cv::Mat& image) {
     cv::Mat image_display;
     if (image.channels() == 1)
         cv::cvtColor(image, image_display, cv::COLOR_GRAY2BGR);
@@ -322,8 +322,8 @@ bool sp_trt::process_output(
 }
 
 [[maybe_unused]] void sp_trt::visualization(const std::vector<cv::KeyPoint>& kps,
-                           const std::string& image_name,
-                           const cv::Mat& image) {
+                                            const std::string& image_name,
+                                            const cv::Mat& image) {
     cv::Mat image_display;
     if (image.channels() == 1) {
         cv::cvtColor(image, image_display, cv::COLOR_GRAY2BGR);

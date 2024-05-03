@@ -1,6 +1,7 @@
 #ifndef STELLA_VSLAM_OPTIMIZE_POSE_OPTIMIZER_G2O_H
 #define STELLA_VSLAM_OPTIMIZE_POSE_OPTIMIZER_G2O_H
 
+#include <map>
 #include "stella_vslam/optimize/pose_optimizer.h"
 
 #include "stella_vslam/type.h"
@@ -51,6 +52,18 @@ public:
                           const std::vector<std::shared_ptr<data::landmark>>& landmarks,
                           Mat44_t& optimized_pose,
                           std::vector<bool>& outlier_flags) const override;
+
+    unsigned int bundle_adjustment(const data::frame& frm, const data::keyframe* keyfrm, const std::map<int, int>& frm_keyfrm_matches,
+                                   Mat44_t& optimized_pose, std::vector<bool>& outlier_flags) const;
+
+    unsigned int optimize_ba(const Mat44_t& cam_pose_cw, const data::frame_observation& frm_obs,
+                             const Mat44_t& fixed_pose_cw, const data::frame_observation& keyfrm_obs,
+                             const std::map<int, int>& frm_keyfrm_matches,
+                             const feature::orb_params* orb_params,
+                             const camera::base* camera,
+                             const std::vector<std::shared_ptr<data::landmark>>& landmarks,
+                             Mat44_t& optimized_pose,
+                             std::vector<bool>& outlier_flags) const;
 
 private:
     //! robust optimizationの試行回数

@@ -9,6 +9,7 @@ namespace data {
 class frame;
 struct frame_observation;
 class keyframe;
+class landmark;
 } // namespace data
 
 namespace camera {

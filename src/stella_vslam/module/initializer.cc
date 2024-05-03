@@ -13,6 +13,8 @@
 
 #include <spdlog/spdlog.h>
 
+#include <memory>
+
 namespace stella_vslam::module {
 
 initializer::initializer(data::map_database* map_db, const YAML::Node& yaml_node)
@@ -124,17 +126,15 @@ void initializer::create_initializer(data::frame& curr_frm) {
         case camera::model_type_t::Perspective:
         case camera::model_type_t::Fisheye:
         case camera::model_type_t::RadialDivision: {
-            initializer_ = std::unique_ptr<initialize::perspective>(
-                new initialize::perspective(
-                    init_frm_, num_ransac_iters_, min_num_triangulated_pts_, min_num_valid_pts_,
-                    parallax_deg_thr_, reproj_err_thr_, use_fixed_seed_));
+            initializer_ = std::make_unique<initialize::perspective>(
+                init_frm_, num_ransac_iters_, min_num_triangulated_pts_, min_num_valid_pts_,
+                parallax_deg_thr_, reproj_err_thr_, use_fixed_seed_);
             break;
         }
         case camera::model_type_t::Equirectangular: {
-            initializer_ = std::unique_ptr<initialize::bearing_vector>(
-                new initialize::bearing_vector(
-                    init_frm_, num_ransac_iters_, min_num_triangulated_pts_, min_num_valid_pts_,
-                    parallax_deg_thr_, reproj_err_thr_, use_fixed_seed_));
+            initializer_ = std::make_unique<initialize::bearing_vector>(
+                init_frm_, num_ransac_iters_, min_num_triangulated_pts_, min_num_valid_pts_,
+                parallax_deg_thr_, reproj_err_thr_, use_fixed_seed_);
             break;
         }
     }
@@ -372,4 +372,4 @@ bool initializer::create_map_for_stereo(data::base_place_recognition* vpr, data:
     return true;
 }
 
-} // namespace stella_vslam
+} // namespace stella_vslam::module

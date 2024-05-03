@@ -51,6 +51,11 @@ public:
                                   bool use_robust_matcher,
                                   std::vector<unsigned int>& inlier_indices,
                                   std::vector<std::shared_ptr<data::landmark>>& matched_landmarks) const;
+    bool relocalize_by_essential_matrix(data::frame& curr_frm,
+                                        const std::shared_ptr<stella_vslam::data::keyframe>& candidate_keyfrm,
+                                        bool use_robust_matcher,
+                                        std::vector<unsigned int>& inlier_indices,
+                                        std::vector<std::shared_ptr<data::landmark>>& matched_landmarks) const;
     bool optimize_pose(data::frame& curr_frm,
                        const std::shared_ptr<stella_vslam::data::keyframe>& candidate_keyfrm,
                        std::vector<bool>& outlier_flags) const;
