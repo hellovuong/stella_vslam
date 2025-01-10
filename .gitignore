@@ -46,3 +46,5 @@ cmake-build-release/
 
 # vcpkg
 /3rd/vcpkg/
+compile_commands.json
+.cache/clangd/index
