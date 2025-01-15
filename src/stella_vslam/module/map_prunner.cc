@@ -11,7 +11,7 @@ namespace module {
 map_prunner::map_prunner(const YAML::Node& yaml_node, data::map_database* map_db, data::bow_database* bow_db)
     : map_db_(map_db),
       bow_db_(bow_db),
-      min_views_(yaml_node["min_views"].as<unsigned int>(100)),
+      min_views_(yaml_node["min_views"].as<unsigned int>(200)),
       nn_thrs_(yaml_node["nn_thrs"].as<unsigned int>(5)),
       nn_voxel_size_(yaml_node["nn_voxel_size"].as<std::vector<double>>(std::vector<double>{1, 1, 2})),
       score_thrs_(yaml_node["score_thrs"].as<double>(0.5)),
@@ -22,10 +22,6 @@ map_prunner::map_prunner(const YAML::Node& yaml_node, data::map_database* map_db
 }
 
 std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(std::unordered_map<unsigned int, std::shared_ptr<data::keyframe>>& V_check) {
-    // skip prunning if not enough views
-    if (V_check.size() <= min_views_) {
-        return {};
-    }
     // Candidates to be deleted (id and score)
     std::unordered_map<unsigned int, double> D_candidates;
     // maximum number of observations of any view in the current run
@@ -38,11 +34,11 @@ std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(s
     for (auto& [id, v] : V_check) {
         bool prune{false};
 
-        // neither origin kf nor already marked will_be_erased nor root node be deleted
         if (!v) {
             continue;
         }
 
+        // neither origin kf nor already marked will_be_erased nor root node be deleted
         if (v->id_ == 0 || v->will_be_erased() || v->graph_node_->is_spanning_root()) {
             continue;
         }
@@ -59,9 +55,9 @@ std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(s
         // compute score
         double score = w1_ * reloc + w2_ * ((double)n_obs_cur / max_obs) + w3_ * (n_obs_runs / n_runs);
         // check score threshold
-        if (score > score_thrs_) {
-            spdlog::info("{} prunning kf {} with score {} <= {} - was obs {} times in this run (max {}) and {} used for reloc/LC",
-                         prune ? "" : "not", id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs, v->is_reloc_by() ? "" : "not");
+        if (score >= score_thrs_) {
+            spdlog::info("Not prunning kf {} with score {} >= {} - was obs {} times in this run (max {}) and {} used for reloc/LC",
+                         id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs, v->is_reloc_by() ? "" : "not");
             continue;
         }
         // count nn view
@@ -82,7 +78,7 @@ std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(s
         }
 
         spdlog::info("{} prunning kf {} with score {} <= {} - was obs {} times in this run (max {}) and {} used for reloc/LC and nn {} < {}",
-                     prune ? "" : "not", id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), v->is_reloc_by() ? "" : "not", num_nn, nn_thrs_);
+                     prune ? "" : "not", id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs, v->is_reloc_by() ? "" : "not", num_nn, nn_thrs_);
     }
 
     // how many do you want to get rid of?
@@ -118,9 +114,10 @@ void map_prunner::run() {
         if (map_db_->get_num_keyframes() <= min_views_) {
             return;
         }
+        spdlog::info("Checking views from run {}", i_run);
         auto last_run_created_keyfrms = map_db_->get_keyframes_by_run(i_run);
         auto D = select_view_to_prune(last_run_created_keyfrms);
-        spdlog::info("Will delete {} out of {} view from run {}", D.size(), last_run_created_keyfrms.size(), i_run);
+        spdlog::info("Deleting {} out of {} views from run {}", D.size(), last_run_created_keyfrms.size(), i_run);
         for (const auto& [id, score] : D) {
             spdlog::info("Delete view {} and its associate", id);
             auto v = map_db_->get_keyframe(id);
