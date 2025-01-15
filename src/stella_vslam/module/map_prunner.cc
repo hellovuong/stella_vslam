@@ -93,7 +93,7 @@ std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(s
     std::vector<std::pair<unsigned int, double>> sorted_D_candidates(D_candidates.begin(), D_candidates.end());
     // Sort the vector by value
     std::sort(sorted_D_candidates.begin(), sorted_D_candidates.end(),
-              [](const std::pair<unsigned int, unsigned int>& a, const std::pair<unsigned int, unsigned int>& b) {
+              [](const std::pair<unsigned int, double>& a, const std::pair<unsigned int, double>& b) {
                   return a.second < b.second; // Ascending order by value
               });
     // resize to contain at most num_delete
