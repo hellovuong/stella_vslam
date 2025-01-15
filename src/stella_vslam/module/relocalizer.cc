@@ -80,6 +80,8 @@ bool relocalizer::reloc_by_candidates(data::frame& curr_frm,
 
         bool ok = reloc_by_candidate(curr_frm, candidate_keyfrm, use_robust_matcher);
         if (ok) {
+            candidate_keyfrm->set_reloc_by();
+            // TODO: Should increase number of observed
             spdlog::info("relocalization succeeded (frame={}, keyframe={})", curr_frm.id_, candidate_keyfrm->id_);
             // TODO: should set the reference keyframe of the current frame
             return true;

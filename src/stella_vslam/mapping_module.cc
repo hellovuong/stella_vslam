@@ -1,3 +1,4 @@
+#include "stella_vslam/module/map_prunner.h"
 #include "stella_vslam/type.h"
 #include "stella_vslam/mapping_module.h"
 #include "stella_vslam/tracking_module.h"
@@ -11,6 +12,7 @@
 #include "stella_vslam/optimize/local_bundle_adjuster_factory.h"
 #include "stella_vslam/solve/essential_solver.h"
 
+#include <memory>
 #include <thread>
 
 #include <spdlog/spdlog.h>
@@ -19,6 +21,7 @@ namespace stella_vslam {
 
 mapping_module::mapping_module(const YAML::Node& yaml_node, data::map_database* map_db, data::bow_database* bow_db, data::bow_vocabulary* bow_vocab)
     : local_map_cleaner_(new module::local_map_cleaner(yaml_node, map_db, bow_db)),
+      map_prunner_(std::make_unique<module::map_prunner>(yaml_node, map_db, bow_db)),
       map_db_(map_db), bow_db_(bow_db), bow_vocab_(bow_vocab),
       local_bundle_adjuster_(optimize::local_bundle_adjuster_factory::create(yaml_node)),
       enable_interruption_of_landmark_generation_(yaml_node["enable_interruption_of_landmark_generation"].as<bool>(true)),
@@ -237,6 +240,7 @@ void mapping_module::mapping_with_new_keyframe() {
     }
 
     local_map_cleaner_->remove_redundant_keyframes(cur_keyfrm_);
+    // map_prunner_->run();
 
     {
         std::lock_guard<std::mutex> lock(mtx_keyfrm_queue_);

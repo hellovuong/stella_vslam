@@ -12,6 +12,7 @@
 #include "stella_vslam/feature/orb_params.h"
 #include "stella_vslam/util/converter.h"
 
+#include <cstddef>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
@@ -96,6 +97,36 @@ markers2d_from_blob(size_t amount,
     }
     return markers_2d;
 }
+
+inline std::vector<unsigned int> map_to_blob(const std::map<unsigned int, unsigned int>& input_map) {
+    std::vector<unsigned int> blob;
+    for (const auto& pair : input_map) {
+        // Push back the key
+        blob.push_back(pair.first);
+
+        // Push back the value
+        blob.push_back(pair.second);
+    }
+    return blob;
+}
+
+std::map<unsigned int, unsigned int> map_from_blob(size_t amount, const std::vector<unsigned int>& blob) {
+    std::map<unsigned int, unsigned int> output_map;
+    size_t offset = 0;
+
+    for (size_t i = 0; i < amount; i++) {
+        // Read the key
+        unsigned int key = static_cast<unsigned int>(blob[offset++]);
+
+        // Read the value
+        unsigned int value = static_cast<unsigned int>(blob[offset++]);
+
+        // Insert into the map
+        output_map[key] = value;
+    }
+
+    return output_map;
+}
 } // namespace
 
 namespace stella_vslam {
@@ -170,7 +201,7 @@ std::shared_ptr<keyframe> keyframe::from_stmt(sqlite3_stmt* stmt,
     int column_id = 0;
     auto id = sqlite3_column_int64(stmt, column_id);
     column_id++;
-    // NOTE: src_frm_id is removed
+    int run = sqlite3_column_int64(stmt, column_id);
     column_id++;
     auto timestamp = sqlite3_column_double(stmt, column_id);
     column_id++;
@@ -212,23 +243,31 @@ std::shared_ptr<keyframe> keyframe::from_stmt(sqlite3_stmt* stmt,
     cv::Mat descriptors(num_keypts, 32, CV_8U);
     p = reinterpret_cast<const char*>(sqlite3_column_blob(stmt, column_id));
     std::memcpy(descriptors.data, p, sqlite3_column_bytes(stmt, column_id));
-    column_id++;
+    column_id++; // n_markers
 
     std::unordered_map<unsigned int, marker2d> markers_2d;
     if (sqlite3_column_count(stmt) > column_id) {
         auto num_markers = sqlite3_column_int64(stmt, column_id);
-        column_id++;
+        column_id++; // markers
 
         std::vector<double> markers_blob(num_markers * MARKERS2D_BLOB_NUM_DOUBLES);
 
         p = reinterpret_cast<const char*>(sqlite3_column_blob(stmt, column_id));
         assert(static_cast<size_t>(sqlite3_column_bytes(stmt, column_id)) == markers_blob.size() * sizeof(double));
         std::memcpy(markers_blob.data(), p, sqlite3_column_bytes(stmt, column_id));
-        column_id++;
+        column_id++; // num obs runs
 
         assert(markers_blob.size() == MARKERS2D_BLOB_NUM_DOUBLES * num_markers);
         markers_2d = markers2d_from_blob(num_markers, markers_blob);
     }
+
+    auto num_obs_runs = sqlite3_column_int64(stmt, column_id);
+    column_id++; // obs_runs
+    std::vector<unsigned int> obs_runs_blob(num_obs_runs);
+    p = reinterpret_cast<const char*>(sqlite3_column_blob(stmt, column_id));
+    std::memcpy(obs_runs_blob.data(), p, sqlite3_column_bytes(stmt, column_id));
+    auto obs_runs = map_from_blob(num_obs_runs, obs_runs_blob);
+    column_id++;
 
     auto bearings = eigen_alloc_vector<Vec3_t>();
     camera->convert_keypoints_to_bearings(undist_keypts, bearings);
@@ -245,6 +284,8 @@ std::shared_ptr<keyframe> keyframe::from_stmt(sqlite3_stmt* stmt,
     auto keyfrm = data::keyframe::make_keyframe(
         id + next_keyframe_id, timestamp, pose_cw, camera, orb_params,
         frm_obs, bow_vec, bow_feat_vec, markers_2d);
+    keyfrm->run_ = run;
+    keyfrm->obs_by_run_ = obs_runs;
 
     return keyfrm;
 }
@@ -301,8 +342,7 @@ bool keyframe::bind_to_stmt(sqlite3* db, sqlite3_stmt* stmt) const {
     int ret = SQLITE_ERROR;
     int column_id = 1;
     ret = sqlite3_bind_int64(stmt, column_id++, id_);
-    // NOTE: src_frm_id is removed
-    column_id++;
+    ret = sqlite3_bind_int64(stmt, column_id++, run_);
     ret = sqlite3_bind_double(stmt, column_id++, timestamp_);
     if (ret == SQLITE_OK) {
         const auto& camera_name = camera_->name_;
@@ -354,6 +394,18 @@ bool keyframe::bind_to_stmt(sqlite3* db, sqlite3_stmt* stmt) const {
         assert(marker2d_blob.size() == MARKERS2D_BLOB_NUM_DOUBLES * markers_2d_.size());
         ret = sqlite3_bind_blob(stmt, column_id++, marker2d_blob.data(), marker2d_blob.size() * sizeof(double), SQLITE_TRANSIENT);
     }
+
+    size_t num_obs_by_run{0};
+    if (ret == SQLITE_OK) {
+        num_obs_by_run = obs_by_run_.size();
+        ret = sqlite3_bind_int64(stmt, column_id++, num_obs_by_run);
+    }
+
+    if (ret == SQLITE_OK) {
+        auto obs_runs_blob = map_to_blob(obs_by_run_);
+        ret = sqlite3_bind_blob(stmt, column_id++, obs_runs_blob.data(), obs_runs_blob.size() * sizeof(unsigned int), SQLITE_TRANSIENT);
+    }
+
     if (ret != SQLITE_OK) {
         spdlog::error("SQLite error (bind): {}", sqlite3_errmsg(db));
     }

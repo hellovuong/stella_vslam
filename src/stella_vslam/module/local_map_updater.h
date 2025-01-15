@@ -2,6 +2,8 @@
 #define STELLA_VSLAM_MODULE_LOCAL_MAP_UPDATER_H
 
 #include <memory>
+#include <vector>
+#include "stella_vslam/type.h"
 
 namespace stella_vslam {
 

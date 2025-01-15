@@ -303,6 +303,8 @@ void global_optimization_module::correct_loop() {
     // 6. post-processing
 
     SPDLOG_TRACE("global_optimization_module: resume the mapping module");
+    final_candidate_keyfrm->set_reloc_by();
+    cur_keyfrm_->set_reloc_by();
     // resume the mapping module
     mapper_->resume();
 

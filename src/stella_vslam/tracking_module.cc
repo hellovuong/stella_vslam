@@ -514,6 +514,11 @@ bool tracking_module::update_local_map(unsigned int fixed_keyframe_id_threshold,
     // update the reference keyframe for the current frame
     if (nearest_covisibility) {
         curr_frm_.ref_keyfrm_ = nearest_covisibility;
+        // increment obsr count of this view
+        nearest_covisibility->increase_n_obs_cur_run_id(map_db_->run_);
+        if (map_db_->get_max_obs() < nearest_covisibility->get_n_obs_run_id(map_db_->run_)) {
+            map_db_->set_max_obs(nearest_covisibility->get_n_obs_run_id(map_db_->run_));
+        }
     }
 
     map_db_->set_local_landmarks(local_landmarks_);

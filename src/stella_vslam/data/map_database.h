@@ -70,6 +70,15 @@ public:
     std::shared_ptr<keyframe> get_keyframe(unsigned int id) const;
 
     /**
+     * @brief Get keyframe create in id run from database
+     *
+     * @param id run id
+     *
+     * @return
+     */
+    std::unordered_map<unsigned int, std::shared_ptr<keyframe>> get_keyframes_by_run(unsigned int id) const;
+
+    /**
      * Add landmark to the database
      * @param lm
      */
@@ -241,9 +250,10 @@ public:
      * @param bow_vocab
      * @param json_keyfrms
      * @param json_landmarks
+     * @param runs
      */
     void from_json(camera_database* cam_db, orb_params_database* orb_params_db, bow_vocabulary* bow_vocab,
-                   const nlohmann::json& json_keyfrms, const nlohmann::json& json_landmarks);
+                   const nlohmann::json& json_keyfrms, const nlohmann::json& json_landmarks, int runs = 0);
 
     /**
      * Dump keyframes and landmarks as JSON
@@ -272,6 +282,23 @@ public:
     //! next ID
     std::atomic<unsigned int> next_keyframe_id_{0};
     std::atomic<unsigned int> next_landmark_id_{0};
+
+    //! number of run using this map - 0 means newly creating map
+    int run_{0};
+
+    /**
+     * Get max observation of any view in the current run
+     */
+    int get_max_obs() const {
+        return max_obs_;
+    }
+
+    /**
+     * Get max observation of any view in the current run
+     */
+    void set_max_obs(int max_obs) {
+        max_obs_ = max_obs;
+    }
 
 private:
     /**
@@ -344,6 +371,8 @@ private:
 
     //! IDs and keyframes
     std::unordered_map<unsigned int, std::shared_ptr<keyframe>> keyframes_;
+    //! run and {IDs - keyframes}
+    std::map<unsigned int, std::unordered_map<unsigned int, std::shared_ptr<keyframe>>> run_keyframes_;
     //! IDs and landmarks
     std::unordered_map<unsigned int, std::shared_ptr<landmark>> landmarks_;
     //! IDs and markers
@@ -372,6 +401,12 @@ private:
 
     //! frame statistics
     frame_statistics frm_stats_;
+
+    //-----------------------------------------
+    // run statistics
+
+    //! max obs of any view
+    int max_obs_{0};
 };
 
 } // namespace data

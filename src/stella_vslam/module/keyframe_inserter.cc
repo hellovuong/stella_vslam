@@ -211,6 +211,9 @@ std::shared_ptr<data::keyframe> keyframe_inserter::create_new_keyframe(
         map_db->add_landmark(lm);
     }
 
+    // Set run introduced this kf
+    keyfrm->run_ = map_db->run_;
+
     // Queue up the keyframe to the mapping module
     return keyfrm;
 }

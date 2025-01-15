@@ -87,7 +87,7 @@ public:
      */
     static std::vector<std::pair<std::string, std::string>> columns() {
         return std::vector<std::pair<std::string, std::string>>{
-            {"src_frm_id", "INTEGER"}, // removed
+            {"run", "INTEGER"},
             {"ts", "REAL"},
             {"cam", "BLOB"},
             {"orb_params", "BLOB"},
@@ -98,7 +98,9 @@ public:
             {"depths", "BLOB"},
             {"descs", "BLOB"},
             {"n_markers", "INTEGER"},
-            {"markers", "BLOB"}};
+            {"markers", "BLOB"},
+            {"n_obs_run", "INTEGER"},
+            {"obs_run", "BLOB"}};
     };
     bool bind_to_stmt(sqlite3* db, sqlite3_stmt* stmt) const;
 
@@ -249,6 +251,45 @@ public:
      */
     bool will_be_erased();
 
+    /**
+     * Wheter this keyframe used to reloc
+     */
+    bool is_reloc_by() {
+        return reloc_;
+    }
+
+    void set_reloc_by() {
+        reloc_ = true;
+    }
+
+    /**
+     * Get when the view was present in the component
+     */
+    int get_run() {
+        return run_;
+    }
+
+    /**
+     * Get the number of runs where the view was observed
+     */
+    int get_n_obs_runs() {
+        return std::count_if(obs_by_run_.begin(), obs_by_run_.end(), [](const auto& pair) { return pair.second > 0; });
+    }
+
+    /**
+     * Get the number of observations of the view in the current run. Added
+     */
+    int get_n_obs_run_id(unsigned int run_id) const {
+        return obs_by_run_.count(run_id) ? obs_by_run_.at(run_id) : 0;
+    }
+
+    /**
+     * @brief Increase number of observations of the view in the current run
+     */
+    void increase_n_obs_cur_run_id(unsigned int run_id) {
+        obs_by_run_.count(run_id) ? obs_by_run_.at(run_id)++ : obs_by_run_[run_id] = 1;
+    }
+
     //-----------------------------------------
     // meta information
 
@@ -288,6 +329,12 @@ public:
     //! graph node
     std::unique_ptr<graph_node> graph_node_ = nullptr;
 
+    //-----------------------------------------
+    // run statistic
+
+    //! Run that this keyframe introduces to map
+    unsigned int run_{0};
+
 private:
     //-----------------------------------------
     // camera pose
@@ -314,6 +361,15 @@ private:
 
     //! observed markers
     std::unordered_map<unsigned int, std::shared_ptr<marker>> markers_;
+
+    //-----------------------------------------
+    // Statistic for pruning
+
+    //! Used for reloc
+    bool reloc_{false};
+
+    //! run and number of time this kf was observed
+    std::map<unsigned int, unsigned int> obs_by_run_;
 
     //-----------------------------------------
     // flags

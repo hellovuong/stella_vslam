@@ -43,12 +43,14 @@ unsigned int map_database::get_fixed_keyframe_id_threshold() {
 void map_database::add_keyframe(const std::shared_ptr<keyframe>& keyfrm) {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
     keyframes_[keyfrm->id_] = keyfrm;
+    run_keyframes_[keyfrm->run_][keyfrm->id_] = keyfrm;
     last_inserted_keyfrm_ = keyfrm;
 }
 
 void map_database::erase_keyframe(const std::shared_ptr<keyframe>& keyfrm) {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
     keyframes_.erase(keyfrm->id_);
+    run_keyframes_[keyfrm->run_].erase(keyfrm->id_);
 }
 
 std::shared_ptr<keyframe> map_database::get_keyframe(unsigned int id) const {
@@ -57,6 +59,14 @@ std::shared_ptr<keyframe> map_database::get_keyframe(unsigned int id) const {
         return nullptr;
     }
     return keyframes_.at(id);
+}
+
+std::unordered_map<unsigned int, std::shared_ptr<keyframe>> map_database::get_keyframes_by_run(unsigned int id) const {
+    std::lock_guard<std::mutex> lock(mtx_map_access_);
+    if (!run_keyframes_.count(id)) {
+        return {};
+    }
+    return run_keyframes_.at(id);
 }
 
 void map_database::add_landmark(std::shared_ptr<landmark>& lm) {
@@ -254,7 +264,7 @@ void map_database::clear() {
 }
 
 void map_database::from_json(camera_database* cam_db, orb_params_database* orb_params_db, bow_vocabulary* bow_vocab,
-                             const nlohmann::json& json_keyfrms, const nlohmann::json& json_landmarks) {
+                             const nlohmann::json& json_keyfrms, const nlohmann::json& json_landmarks, int json_runs) {
     std::lock_guard<std::mutex> lock(mtx_map_access_);
 
     // When loading the map, leave last_inserted_keyfrm_ as nullptr.
@@ -352,6 +362,9 @@ void map_database::from_json(camera_database* cam_db, orb_params_database* orb_p
             lm->compute_descriptor();
         }
     }
+
+    // Step 8. Load and increment runs
+    run_ = json_runs++;
 }
 
 void map_database::register_keyframe(camera_database* cam_db, orb_params_database* orb_params_db, bow_vocabulary* bow_vocab,
@@ -577,6 +590,7 @@ bool map_database::load_keyframes_from_db(sqlite3* db,
         // Append to map database
         assert(!keyframes_.count(keyfrm->id_));
         keyframes_[keyfrm->id_] = keyfrm;
+        run_keyframes_[keyfrm->run_][keyfrm->id_] = keyfrm;
     }
 
     sqlite3_finalize(stmt);

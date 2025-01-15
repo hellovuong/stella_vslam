@@ -4,6 +4,7 @@
 #include "stella_vslam/config.h"
 #include "stella_vslam/camera/base.h"
 #include "stella_vslam/module/local_map_cleaner.h"
+#include "stella_vslam/module/map_prunner.h"
 #include "stella_vslam/optimize/local_bundle_adjuster.h"
 #include "stella_vslam/data/bow_vocabulary_fwd.h"
 
@@ -98,6 +99,9 @@ public:
     //! Abort the local BA externally
     //! (NOTE: this function does not wait for abort)
     void abort_local_BA();
+
+    //! map prunner
+    std::unique_ptr<module::map_prunner> map_prunner_ = nullptr;
 
 private:
     //-----------------------------------------

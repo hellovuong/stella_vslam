@@ -101,7 +101,7 @@ Initializer:
   min_num_triangulated_pts: 100
 
 System:
-  map_format: "msgpack"
+  map_format: "sqlite3"
   num_grid_cols: 47
   num_grid_rows: 30
 

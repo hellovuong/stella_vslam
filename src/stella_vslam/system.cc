@@ -264,6 +264,7 @@ bool system::load_map_database(const std::string& path) const {
 
 bool system::save_map_database(const std::string& path) const {
     pause_other_threads();
+    mapper_->map_prunner_->run();
     spdlog::debug("save_map_database: {}", path);
     bool ok = map_database_io_->save(path, cam_db_, orb_params_db_, map_db_);
     resume_other_threads();

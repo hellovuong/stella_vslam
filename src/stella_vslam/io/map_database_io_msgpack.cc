@@ -90,6 +90,7 @@ bool map_database_io_msgpack::load(const std::string& path,
     orb_params_db->from_json(json_orb_params);
     const auto json_keyfrms = json.at("keyframes");
     const auto json_landmarks = json.at("landmarks");
+    const auto json_n_run = json.at("runs");
     map_db->from_json(cam_db, orb_params_db, bow_vocab, json_keyfrms, json_landmarks);
     // load next ID
     map_db->next_keyframe_id_ += json.at("keyframe_next_id").get<unsigned int>();

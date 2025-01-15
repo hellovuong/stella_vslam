@@ -8,6 +8,7 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/marker_initializer.h
                ${CMAKE_CURRENT_SOURCE_DIR}/two_view_triangulator.h
                ${CMAKE_CURRENT_SOURCE_DIR}/local_map_cleaner.h
+               ${CMAKE_CURRENT_SOURCE_DIR}/map_prunner.h
                ${CMAKE_CURRENT_SOURCE_DIR}/local_map_updater.h
                ${CMAKE_CURRENT_SOURCE_DIR}/loop_detector.h
                ${CMAKE_CURRENT_SOURCE_DIR}/loop_bundle_adjuster.h
@@ -18,6 +19,7 @@ target_sources(${PROJECT_NAME}
                ${CMAKE_CURRENT_SOURCE_DIR}/marker_initializer.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/two_view_triangulator.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/local_map_cleaner.cc
+               ${CMAKE_CURRENT_SOURCE_DIR}/map_prunner.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/local_map_updater.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/loop_detector.cc
                ${CMAKE_CURRENT_SOURCE_DIR}/loop_bundle_adjuster.cc)
