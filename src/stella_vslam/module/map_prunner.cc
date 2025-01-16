@@ -18,12 +18,12 @@ map_prunner::map_prunner(const YAML::Node& yaml_node, data::map_database* map_db
       w1_(yaml_node["w1"].as<double>(1.5)),
       w2_(yaml_node["w2"].as<double>(1.5)),
       w3_(yaml_node["w3"].as<double>(1)) {
-    spdlog::info("Construct map_prunner module with parameters min_views {}, nn_thrs {}; score_thrs{}; w1 {}; w2 {}", min_views_, nn_thrs_, score_thrs_, w1_, w2_);
+    spdlog::info("map_prunner: min_views {}, nn_thrs {}; score_thrs{}; w1 {}; w2 {}", min_views_, nn_thrs_, score_thrs_, w1_, w2_);
 }
 
-std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(std::unordered_map<unsigned int, std::shared_ptr<data::keyframe>>& V_check) {
+std::unordered_map<unsigned int, double> map_prunner::select_view_to_prune(std::unordered_map<unsigned int, std::shared_ptr<data::keyframe>>& V_check) {
     // Candidates to be deleted (id and score)
-    std::unordered_map<unsigned int, double> D_candidates;
+    std::vector<std::pair<unsigned int, double>> D_candidates;
     // maximum number of observations of any view in the current run
     int max_obs_cur = map_db_->get_max_obs();
 
@@ -32,8 +32,6 @@ std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(s
     }
 
     for (auto& [id, v] : V_check) {
-        bool prune{false};
-
         if (!v) {
             continue;
         }
@@ -60,50 +58,50 @@ std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(s
                          id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs_cur, v->is_reloc_by() ? "" : "not");
             continue;
         }
-        D_candidates[id] = score;
+        D_candidates.push_back({id, score});
+    }
+
+    // how many do you want to get rid of?
+    size_t num_delete = map_db_->get_num_keyframes() - min_views_;
+
+    // sort acsent by score
+    // Sort the vector by value
+    std::sort(D_candidates.begin(), D_candidates.end(),
+              [](const std::pair<unsigned int, double>& a, const std::pair<unsigned int, double>& b) {
+                  return a.second < b.second; // Ascending order by value
+              });
+
+    // check sorted Candidates with nn threshold
+    std::unordered_map<unsigned int, double> D; // list to be deleted
+    D.clear();
+    for (const auto& [id, score] : D_candidates) {
+        bool prune = false;
+        auto v = map_db_->get_keyframe(id);
         // count nn view
         auto filtered_v_s = map_db_->get_close_keyframes(v->get_pose_cw(), sqrt(nn_voxel_size_.at(0) * nn_voxel_size_.at(0) + nn_voxel_size_.at(1) * nn_voxel_size_.at(1)),
                                                          nn_voxel_size_.at(2));
         unsigned int num_nn{0};
         // do not count the one that will be deleted
         for (const auto& filtered_v : filtered_v_s) {
-            if (!filtered_v->will_be_erased() && !D_candidates.count(filtered_v->id_)) {
+            if (!filtered_v->will_be_erased() && !D.count(filtered_v->id_)) {
                 num_nn++;
             }
         }
 
         // check nn_thrs
         if (num_nn >= nn_thrs_) {
+            D[id] = score;
             prune = true;
-        }
-
-        if (!prune) {
-            D_candidates.erase(id);
         }
 
         spdlog::info("{} prunning kf {} with score {} <= {} - was obs {} times in this run (max {}) and {} used for reloc/LC and nn {} < {}",
                      prune ? "" : "not", id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs_cur, v->is_reloc_by() ? "" : "not", num_nn, nn_thrs_);
+
+        if (D.size() >= num_delete)
+            break;
     }
 
-    // how many do you want to get rid of?
-    size_t num_delete = map_db_->get_num_keyframes() - min_views_;
-
-    // only find this much!
-    if (num_delete >= D_candidates.size()) {
-        return {D_candidates.begin(), D_candidates.end()};
-    }
-
-    // sort acsent by score
-    std::vector<std::pair<unsigned int, double>> sorted_D_candidates(D_candidates.begin(), D_candidates.end());
-    // Sort the vector by value
-    std::sort(sorted_D_candidates.begin(), sorted_D_candidates.end(),
-              [](const std::pair<unsigned int, double>& a, const std::pair<unsigned int, double>& b) {
-                  return a.second < b.second; // Ascending order by value
-              });
-    // resize to contain at most num_delete
-    sorted_D_candidates.resize(num_delete);
-
-    return sorted_D_candidates;
+    return D;
 }
 
 void map_prunner::run() {

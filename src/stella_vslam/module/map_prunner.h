@@ -28,11 +28,9 @@ public:
     map_prunner& operator=(const map_prunner&) = default;
     ~map_prunner() = default;
 
-    std::vector<std::pair<unsigned int, double>> select_view_to_prune(std::unordered_map<unsigned int, std::shared_ptr<data::keyframe>>& V);
+    std::unordered_map<unsigned int, double> select_view_to_prune(std::unordered_map<unsigned int, std::shared_ptr<data::keyframe>>& V);
 
     void run();
-
-    bool once_{false};
 
 private:
     //-----------------------------------------

@@ -240,7 +240,6 @@ void mapping_module::mapping_with_new_keyframe() {
     }
 
     local_map_cleaner_->remove_redundant_keyframes(cur_keyfrm_);
-    // map_prunner_->run();
 
     {
         std::lock_guard<std::mutex> lock(mtx_keyfrm_queue_);
