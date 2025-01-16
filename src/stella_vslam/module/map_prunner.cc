@@ -14,10 +14,10 @@ map_prunner::map_prunner(const YAML::Node& yaml_node, data::map_database* map_db
       min_views_(yaml_node["min_views"].as<unsigned int>(200)),
       nn_thrs_(yaml_node["nn_thrs"].as<unsigned int>(5)),
       nn_voxel_size_(yaml_node["nn_voxel_size"].as<std::vector<double>>(std::vector<double>{1, 1, 2})),
-      score_thrs_(yaml_node["score_thrs"].as<double>(0.5)),
+      score_thrs_(yaml_node["score_thrs"].as<double>(0.6)),
       w1_(yaml_node["w1"].as<double>(1.5)),
       w2_(yaml_node["w2"].as<double>(1.5)),
-      w3_(yaml_node["w3"].as<double>(0.2)) {
+      w3_(yaml_node["w3"].as<double>(1)) {
     spdlog::info("Construct map_prunner module with parameters min_views {}, nn_thrs {}; score_thrs{}; w1 {}; w2 {}", min_views_, nn_thrs_, score_thrs_, w1_, w2_);
 }
 
