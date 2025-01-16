@@ -25,9 +25,9 @@ std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(s
     // Candidates to be deleted (id and score)
     std::unordered_map<unsigned int, double> D_candidates;
     // maximum number of observations of any view in the current run
-    int max_obs = map_db_->get_max_obs();
+    int max_obs_cur = map_db_->get_max_obs();
 
-    if (max_obs == 0) {
+    if (max_obs_cur == 0) {
         return {};
     }
 
@@ -53,13 +53,14 @@ std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(s
         double n_runs = map_db_->run_ - v->get_run() + 1;
 
         // compute score
-        double score = w1_ * reloc + w2_ * ((double)n_obs_cur / max_obs) + w3_ * (n_obs_runs / n_runs);
+        double score = w1_ * reloc + w2_ * ((double)n_obs_cur / max_obs_cur) + w3_ * (n_obs_runs / n_runs);
         // check score threshold
         if (score >= score_thrs_) {
             spdlog::info("Not prunning kf {} with score {} >= {} - was obs {} times in this run (max {}) and {} used for reloc/LC",
-                         id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs, v->is_reloc_by() ? "" : "not");
+                         id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs_cur, v->is_reloc_by() ? "" : "not");
             continue;
         }
+        D_candidates[id] = score;
         // count nn view
         auto filtered_v_s = map_db_->get_close_keyframes(v->get_pose_cw(), sqrt(nn_voxel_size_.at(0) * nn_voxel_size_.at(0) + nn_voxel_size_.at(1) * nn_voxel_size_.at(1)),
                                                          nn_voxel_size_.at(2));
@@ -73,12 +74,15 @@ std::vector<std::pair<unsigned int, double>> map_prunner::select_view_to_prune(s
 
         // check nn_thrs
         if (num_nn >= nn_thrs_) {
-            D_candidates[id] = score;
             prune = true;
         }
 
+        if (!prune) {
+            D_candidates.erase(id);
+        }
+
         spdlog::info("{} prunning kf {} with score {} <= {} - was obs {} times in this run (max {}) and {} used for reloc/LC and nn {} < {}",
-                     prune ? "" : "not", id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs, v->is_reloc_by() ? "" : "not", num_nn, nn_thrs_);
+                     prune ? "" : "not", id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs_cur, v->is_reloc_by() ? "" : "not", num_nn, nn_thrs_);
     }
 
     // how many do you want to get rid of?
