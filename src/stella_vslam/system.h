@@ -153,6 +153,10 @@ public:
     bool relocalize_by_pose_2d(const Mat44_t& cam_pose_wc, const Vec3_t& normal_vector);
 
     //-----------------------------------------
+    // management for prune
+    //! Call prune
+    void prune();
+    //-----------------------------------------
     // management for pause
 
     //! Pause the tracking module

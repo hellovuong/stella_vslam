@@ -533,6 +533,10 @@ void mapping_module::fuse_landmark_duplication(const std::vector<std::shared_ptr
     }
 }
 
+void mapping_module::clean_up() {
+    map_prunner_->run();
+}
+
 std::shared_future<void> mapping_module::async_reset() {
     std::lock_guard<std::mutex> lock(mtx_reset_);
     reset_is_requested_ = true;

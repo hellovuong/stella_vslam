@@ -100,8 +100,8 @@ public:
     //! (NOTE: this function does not wait for abort)
     void abort_local_BA();
 
-    //! map prunner
-    std::unique_ptr<module::map_prunner> map_prunner_ = nullptr;
+    //! clean up global map
+    void clean_up();
 
 private:
     //-----------------------------------------
@@ -201,6 +201,9 @@ private:
 
     //! local map cleaner
     std::unique_ptr<module::local_map_cleaner> local_map_cleaner_ = nullptr;
+
+    //! map prunner
+    std::unique_ptr<module::map_prunner> map_prunner_ = nullptr;
 
     //-----------------------------------------
     // database

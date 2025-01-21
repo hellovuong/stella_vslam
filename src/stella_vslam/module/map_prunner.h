@@ -28,12 +28,29 @@ public:
     map_prunner& operator=(const map_prunner&) = default;
     ~map_prunner() = default;
 
-    std::unordered_map<unsigned int, double> select_view_to_prune(std::unordered_map<unsigned int, std::shared_ptr<data::keyframe>>& V);
-
     void run();
 
 private:
     //-----------------------------------------
+    // Memeber methods for keyframes pruning
+
+    /**
+     * @brief Select views (keyframes) to be deleted
+     *
+     * @param V set of views to be checked
+     *
+     * @return set of view to be deleted [id, score]
+     *
+     * @note https://arxiv.org/pdf/1908.03605
+     */
+    std::unordered_map<unsigned int, double> select_view_to_prune(std::unordered_map<unsigned int, std::shared_ptr<data::keyframe>>& V);
+
+    /**
+     * @brief Delete set of given keyframes
+     *
+     * @param D
+     */
+    void delete_keyframes(const std::unordered_map<unsigned int, double>& D);
     // Memeber to get Views from map
 
     //! map database

@@ -54,8 +54,8 @@ std::unordered_map<unsigned int, double> map_prunner::select_view_to_prune(std::
         double score = w1_ * reloc + w2_ * ((double)n_obs_cur / max_obs_cur) + w3_ * (n_obs_runs / n_runs);
         // check score threshold
         if (score >= score_thrs_) {
-            spdlog::info("Not prunning kf {} with score {} >= {} - was obs {} times in this run (max {}) and {} used for reloc/LC",
-                         id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs_cur, v->is_reloc_by() ? "" : "not");
+            spdlog::debug("Not prunning kf {} with score {} >= {} - was obs {} times in this run (max {}) and {} used for reloc/LC",
+                          id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs_cur, v->is_reloc_by() ? "" : "not");
             continue;
         }
         D_candidates.push_back({id, score});
@@ -94,8 +94,8 @@ std::unordered_map<unsigned int, double> map_prunner::select_view_to_prune(std::
             prune = true;
         }
 
-        spdlog::info("{} prunning kf {} with score {} <= {} - was obs {} times in this run (max {}) and {} used for reloc/LC and nn {} < {}",
-                     prune ? "" : "not", id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs_cur, v->is_reloc_by() ? "" : "not", num_nn, nn_thrs_);
+        spdlog::debug("{} prunning kf {} with score {} <= {} - was obs {} times in this run (max {}) and {} used for reloc/LC and nn {} < {}",
+                      prune ? "" : "not", id, score, score_thrs_, v->get_n_obs_run_id(map_db_->run_), max_obs_cur, v->is_reloc_by() ? "" : "not", num_nn, nn_thrs_);
 
         if (D.size() >= num_delete)
             break;
@@ -105,26 +105,47 @@ std::unordered_map<unsigned int, double> map_prunner::select_view_to_prune(std::
 }
 
 void map_prunner::run() {
-    if (map_db_->run_ == 0)
-        return;
+    // save some info for log
+    auto num_kfs_before = map_db_->get_num_keyframes();
+    auto num_lms_before = map_db_->get_num_landmarks();
 
-    if (map_db_->get_num_keyframes() <= min_views_) {
-        return;
+    if (map_db_->run_ > 0 && map_db_->get_num_keyframes() >= min_views_) {
+        for (int i_run = 0; i_run <= map_db_->run_; i_run++) {
+            spdlog::info("Checking views from run {}", i_run);
+            auto last_run_created_keyfrms = map_db_->get_keyframes_by_run(i_run);
+            auto D = select_view_to_prune(last_run_created_keyfrms);
+            spdlog::debug("Deleting {} out of {} views from run {}", D.size(), last_run_created_keyfrms.size(), i_run);
+            delete_keyframes(D);
+        }
     }
 
-    for (int i_run = 0; i_run <= map_db_->run_; i_run++) {
-        if (map_db_->get_num_keyframes() <= min_views_) {
-            return;
+    spdlog::info("Before prune: total kfs {} and lms {}", num_kfs_before, num_lms_before);
+    spdlog::info("After prune:  total kfs {} and lms {}", map_db_->get_num_keyframes(), map_db_->get_num_landmarks());
+}
+
+void map_prunner::delete_keyframes(const std::unordered_map<unsigned int, double>& D) {
+    for (const auto& [id, score] : D) {
+        spdlog::debug("Delete view {} and its associate", id);
+        auto keyfrm = map_db_->get_keyframe(id);
+        const auto landmarks = keyfrm->get_landmarks();
+        keyfrm->prepare_for_erasing(map_db_, bow_db_);
+
+        for (const auto& lm : landmarks) {
+            if (!lm) {
+                continue;
+            }
+            if (lm->will_be_erased()) {
+                continue;
+            }
+            if (!lm->has_representative_descriptor()) {
+                lm->compute_descriptor();
+            }
+            if (!lm->has_valid_prediction_parameters()) {
+                lm->update_mean_normal_and_obs_scale_variance();
+            }
         }
-        spdlog::info("Checking views from run {}", i_run);
-        auto last_run_created_keyfrms = map_db_->get_keyframes_by_run(i_run);
-        auto D = select_view_to_prune(last_run_created_keyfrms);
-        spdlog::info("Deleting {} out of {} views from run {}", D.size(), last_run_created_keyfrms.size(), i_run);
-        for (const auto& [id, score] : D) {
-            spdlog::info("Delete view {} and its associate", id);
-            auto v = map_db_->get_keyframe(id);
-            const auto v_landmarks = v->get_landmarks();
-            v->prepare_for_erasing(map_db_, bow_db_);
+    }
+}
 
             for (const auto& lm : v_landmarks) {
                 if (!lm) {
