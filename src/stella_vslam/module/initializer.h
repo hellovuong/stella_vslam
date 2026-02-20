@@ -32,7 +32,7 @@ public:
     initializer() = delete;
 
     //! Constructor
-    initializer(data::map_database* map_db, data::bow_database* bow_db,
+    initializer(data::map_database* map_db,
                 const YAML::Node& yaml_node);
 
     //! Destructor
@@ -60,8 +60,6 @@ public:
 private:
     //! map database
     data::map_database* map_db_ = nullptr;
-    //! BoW database
-    data::bow_database* bow_db_ = nullptr;
     //! initializer status
     initializer_state_t state_ = initializer_state_t::NotReady;
 
@@ -89,6 +87,10 @@ private:
     const float scaling_factor_;
     //! Use fixed random seed for RANSAC if true
     const bool use_fixed_seed_;
+    //! Gain threshold (for g2o)
+    const float gain_threshold_;
+    //! Verbosity (for g2o)
+    const bool verbose_;
 
     //-----------------------------------------
     // for monocular camera model
@@ -113,6 +115,8 @@ private:
     std::vector<cv::Point2f> prev_matched_coords_;
     //! initial matching indices (index: idx of initial frame, value: idx of current frame)
     std::vector<int> init_matches_;
+
+    size_t required_keyframes_for_marker_initialization_;
 
     //-----------------------------------------
     // for stereo or RGBD camera model

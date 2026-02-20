@@ -21,12 +21,18 @@ namespace module {
 class relocalizer {
 public:
     //! Constructor
-    explicit relocalizer(const double bow_match_lowe_ratio = 0.75, const double proj_match_lowe_ratio = 0.9,
+    explicit relocalizer(const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer,
+                         const double bow_match_lowe_ratio = 0.75, const double proj_match_lowe_ratio = 0.9,
                          const double robust_match_lowe_ratio = 0.8,
                          const unsigned int min_num_bow_matches = 20, const unsigned int min_num_valid_obs = 50,
-                         const bool use_fixed_seed = false);
+                         const bool use_fixed_seed = false,
+                         const bool search_neighbor = true,
+                         const unsigned int top_n_covisibilities_to_search = 10,
+                         const float num_common_words_thr_ratio = 0.8f,
+                         const unsigned int max_num_ransac_iter = 30,
+                         const unsigned int max_num_local_keyfrms = 60);
 
-    explicit relocalizer(const YAML::Node& yaml_node);
+    explicit relocalizer(const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer, const YAML::Node& yaml_node);
 
     //! Destructor
     virtual ~relocalizer();
@@ -78,10 +84,21 @@ private:
     //! robust matcher
     const match::robust robust_matcher_;
     //! pose optimizer
-    const optimize::pose_optimizer pose_optimizer_;
+    std::shared_ptr<optimize::pose_optimizer> pose_optimizer_ = nullptr;
 
     //! Use fixed random seed for RANSAC if true
-    const bool use_fixed_seed_;
+    const bool use_fixed_seed_ = false;
+
+    //! If true, points used by the PnP solver are searched not only from candidate keyframes, but also from neighbor keyframes
+    const bool search_neighbor_ = true;
+    //! number of neighbor keyframes
+    const unsigned int top_n_covisibilities_to_search_ = 10;
+
+    const float num_common_words_thr_ratio_ = 0.8f;
+
+    const unsigned int max_num_ransac_iter_ = 30;
+
+    const unsigned int max_num_local_keyfrms_ = 60;
 };
 
 } // namespace module

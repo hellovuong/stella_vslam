@@ -4,15 +4,24 @@
 #include "stella_vslam/marker_detector/base.h"
 
 #include <unordered_map>
-#include <opencv2/core/mat.hpp>
-#include <opencv2/core/types.hpp>
 
+#if CV_MAJOR_VERSION <= 4 && CV_MINOR_VERSION < 7
 namespace cv {
 namespace aruco {
 class DetectorParameters;
 class Dictionary;
 } // namespace aruco
 } // namespace cv
+#else
+namespace cv {
+namespace aruco {
+class ArucoDetector;
+} // namespace aruco
+} // namespace cv
+#endif
+
+#include <opencv2/core/mat.hpp>
+#include <opencv2/core/types.hpp>
 
 namespace stella_vslam {
 
@@ -47,8 +56,12 @@ public:
     static bool is_valid();
 
     //! parameters for marker detection
+#if CV_MAJOR_VERSION <= 4 && CV_MINOR_VERSION < 7
     cv::Ptr<cv::aruco::DetectorParameters> parameters_;
     cv::Ptr<cv::aruco::Dictionary> dictionary_;
+#else
+    std::shared_ptr<cv::aruco::ArucoDetector> detector_;
+#endif
 };
 
 } // namespace marker_detector

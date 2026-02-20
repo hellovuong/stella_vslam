@@ -22,9 +22,12 @@ public:
     explicit keyframe_inserter(const double max_interval = 1.0,
                                const double min_interval = 0.1,
                                const double max_distance = -1.0,
+                               const double min_distance = -1.0,
                                const double lms_ratio_thr_almost_all_lms_are_tracked = 0.9,
                                const double lms_ratio_thr_view_changed = 0.8,
-                               const unsigned int enough_lms_thr = 100);
+                               const unsigned int enough_lms_thr = 100,
+                               const bool wait_for_local_bundle_adjustment = false,
+                               const size_t required_keyframes_for_marker_initialization = 3);
 
     explicit keyframe_inserter(const YAML::Node& yaml_node);
 
@@ -47,13 +50,12 @@ public:
     /**
      * Insert the new keyframe derived from the current frame
      */
-    std::shared_ptr<data::keyframe> insert_new_keyframe(data::map_database* map_db, data::frame& curr_frm);
+    void insert_new_keyframe(data::map_database* map_db, data::frame& curr_frm);
+
+    static void check_marker_initialization(data::marker& mkr, size_t needed_observations_for_initialization);
 
 private:
-    /**
-     * Queue the new keyframe to the mapping module
-     */
-    void queue_keyframe(const std::shared_ptr<data::keyframe>& keyfrm);
+    std::shared_ptr<data::keyframe> create_new_keyframe(data::map_database* map_db, data::frame& curr_frm);
 
     //! mapping module
     mapping_module* mapper_ = nullptr;
@@ -62,12 +64,16 @@ private:
     const double max_interval_ = 1.0;
     const double min_interval_ = 0.1;
     const double max_distance_ = -1.0;
+    const double min_distance_ = -1.0;
 
     //! Ratio-threshold of "the number of 3D points observed in the current frame" / "that of 3D points observed in the last keyframe"
     const double lms_ratio_thr_almost_all_lms_are_tracked_ = 0.9;
     const double lms_ratio_thr_view_changed_ = 0.8;
 
     const unsigned int enough_lms_thr_ = 100;
+    const bool wait_for_local_bundle_adjustment_ = false;
+
+    const size_t required_keyframes_for_marker_initialization_ = 3;
 };
 
 } // namespace module

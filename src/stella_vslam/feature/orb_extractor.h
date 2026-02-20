@@ -2,14 +2,46 @@
 #define STELLA_VSLAM_FEATURE_ORB_EXTRACTOR_H
 
 #include "stella_vslam/feature/orb_params.h"
-#include "stella_vslam/feature/orb_extractor_node.h"
 #include "stella_vslam/feature/orb_impl.h"
 
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
 
+#ifdef USE_CUDA_EFFICIENT_DESCRIPTORS
+#include <cuda_efficient_descriptors.h>
+#endif
+
 namespace stella_vslam {
 namespace feature {
+
+enum class descriptor_type {
+    ORB,
+    HASH_SIFT
+};
+
+inline descriptor_type descriptor_type_from_string(const std::string& desc_type_str) {
+    if (desc_type_str == "ORB") {
+        return descriptor_type::ORB;
+    }
+    else if (desc_type_str == "HASH_SIFT" || desc_type_str == "HashSIFT") {
+        return descriptor_type::HASH_SIFT;
+    }
+    else {
+        throw std::runtime_error("Invalid descriptor_type");
+    }
+}
+
+inline std::string descriptor_type_to_string(descriptor_type desc_type) {
+    if (desc_type == descriptor_type::ORB) {
+        return "ORB";
+    }
+    else if (desc_type == descriptor_type::HASH_SIFT) {
+        return "HashSIFT";
+    }
+    else {
+        throw std::runtime_error("Invalid descriptor_type");
+    }
+}
 
 class orb_extractor {
 public:
@@ -17,7 +49,8 @@ public:
 
     //! Constructor
     orb_extractor(const orb_params* orb_params,
-                  const unsigned int max_num_keypts,
+                  const unsigned int min_area,
+                  const descriptor_type desc_type = descriptor_type::ORB,
                   const std::vector<std::vector<float>>& mask_rects = {});
 
     //! Destructor
@@ -51,20 +84,9 @@ private:
     void compute_fast_keypoints(std::vector<std::vector<cv::KeyPoint>>& all_keypts, const cv::Mat& mask) const;
 
     //! Pick computed keypoints on the image uniformly
-    std::vector<cv::KeyPoint> distribute_keypoints_via_tree(const std::vector<cv::KeyPoint>& keypts_to_distribute,
-                                                            int min_x, int max_x, int min_y, int max_y,
-                                                            float inv_scale_factor) const;
-
-    //! Initialize nodes that used for keypoint distribution tree
-    std::list<orb_extractor_node> initialize_nodes(const std::vector<cv::KeyPoint>& keypts_to_distribute,
-                                                   int min_x, int max_x, int min_y, int max_y) const;
-
-    //! Assign child nodes to the all node list
-    void assign_child_nodes(const std::array<orb_extractor_node, 4>& child_nodes, std::list<orb_extractor_node>& nodes,
-                            std::vector<std::pair<int, orb_extractor_node*>>& leaf_nodes) const;
-
-    //! Find keypoint which has maximum value of response
-    std::vector<cv::KeyPoint> find_keypoints_with_max_response(std::list<orb_extractor_node>& nodes) const;
+    std::vector<cv::KeyPoint> distribute_keypoints(const std::vector<cv::KeyPoint>& keypts_to_distribute,
+                                                   const int min_x, const int max_x, const int min_y, const int max_y,
+                                                   const float scale_factor) const;
 
     //! Compute orientation for each keypoint
     void compute_orientation(const cv::Mat& image, std::vector<cv::KeyPoint>& keypts) const;
@@ -75,14 +97,11 @@ private:
     //! Compute the gradient direction of pixel intensity in a circle around the point
     float ic_angle(const cv::Mat& image, const cv::Point2f& point) const;
 
-    //! Compute orb descriptors for all keypoint
-    void compute_orb_descriptors(const cv::Mat& image, const std::vector<cv::KeyPoint>& keypts, cv::Mat& descriptors) const;
-
     //! Compute orb descriptor of a keypoint
     void compute_orb_descriptor(const cv::KeyPoint& keypt, const cv::Mat& image, uchar* desc) const;
 
-    //! Size of node occupied by one feature point
-    unsigned int min_size_;
+    //! Area of node occupied by one feature point
+    unsigned int min_area_sqrt_;
 
     //! size of maximum ORB patch radius
     static constexpr unsigned int orb_patch_radius_ = 19;
@@ -91,7 +110,13 @@ private:
     bool mask_is_initialized_ = false;
     cv::Mat rect_mask_;
 
+    descriptor_type desc_type_;
+
+    //! feature descriptor implementations
     orb_impl orb_impl_;
+#ifdef USE_CUDA_EFFICIENT_DESCRIPTORS
+    cv::Ptr<cv::cuda::HashSIFT> hash_sift_;
+#endif
 };
 
 } // namespace feature

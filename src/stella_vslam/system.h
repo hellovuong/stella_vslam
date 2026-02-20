@@ -80,10 +80,10 @@ public:
     void save_keyframe_trajectory(const std::string& path, const std::string& format) const;
 
     //! Load the map database from file
-    void load_map_database(const std::string& path) const;
+    bool load_map_database(const std::string& path) const;
 
     //! Save the map database to file
-    void save_map_database(const std::string& path) const;
+    bool save_map_database(const std::string& path) const;
 
     //! Get the map publisher
     const std::shared_ptr<publish::map_publisher> get_map_publisher() const;
@@ -121,10 +121,13 @@ public:
     //! Abort the loop BA externally
     void abort_loop_BA();
 
+    //! Enable temporal mapping
+    void enable_temporal_mapping();
+
     //-----------------------------------------
     // data feeding methods
 
-    std::shared_ptr<Mat44_t> feed_frame(const data::frame& frm, const cv::Mat& img);
+    std::shared_ptr<Mat44_t> feed_frame(const data::frame& frm, const cv::Mat& img, double extraction_time_elapsed_ms);
 
     //! Feed a monocular frame to SLAM system
     //! (NOTE: distorted images are acceptable if calibrated)
@@ -228,6 +231,9 @@ private:
     //! mapping thread
     std::unique_ptr<std::thread> mapping_thread_ = nullptr;
 
+    //! next frame ID
+    std::atomic<unsigned int> next_frame_id_{0};
+
     //! global optimization module
     global_optimization_module* global_optimizer_ = nullptr;
     //! global optimization thread
@@ -240,6 +246,11 @@ private:
     feature::orb_extractor* extractor_right_ = nullptr;
     //! ORB extractor only when used in initializing
     feature::orb_extractor* ini_extractor_left_ = nullptr;
+
+    //! number of columns of grid to accelerate reprojection matching
+    unsigned int num_grid_cols_ = 64;
+    //! number of rows of grid to accelerate reprojection matching
+    unsigned int num_grid_rows_ = 48;
 
     //! marker detector
     marker_detector::base* marker_detector_ = nullptr;

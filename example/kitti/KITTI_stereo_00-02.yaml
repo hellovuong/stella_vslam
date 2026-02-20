@@ -1,5 +1,9 @@
 # KITTI stereo model for seq.00-02
 
+System:
+  num_grid_cols: 40
+  num_grid_rows: 13
+
 #==============#
 # Camera Model #
 #==============#
@@ -32,6 +36,9 @@ Camera:
 # Tracking Parameters #
 #=====================#
 
+Tracking:
+  margin_last_frame_projection: 10.0
+
 Preprocessing:
   min_size: 800
 
@@ -59,7 +66,7 @@ Mapping:
 #========================#
 
 Initializer:
-  num_min_triangulated_pts: 100
+  min_num_triangulated_pts: 100
 
 #===========================#
 # PangolinViewer Parameters #

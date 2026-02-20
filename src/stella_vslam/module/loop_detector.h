@@ -128,7 +128,8 @@ private:
     //! transform optimizer
     const optimize::transform_optimizer transform_optimizer_;
 
-    const optimize::pose_optimizer pose_optimizer_;
+    //! pose optimizer
+    std::unique_ptr<optimize::pose_optimizer> pose_optimizer_ = nullptr;
 
     //! flag which indicates the loop detector is enabled or not
     std::atomic<bool> loop_detector_is_enabled_{true};
@@ -191,6 +192,8 @@ private:
 
     //! Use fixed random seed for RANSAC if true
     const bool use_fixed_seed_;
+
+    const float num_common_words_thr_ratio_ = 0.8f;
 };
 
 } // namespace module

@@ -42,6 +42,16 @@ public:
     ~map_database();
 
     /**
+     * Set fixed_keyframe_id_threshold
+     */
+    void set_fixed_keyframe_id_threshold();
+
+    /**
+     * Get fixed_keyframe_id_threshold
+     */
+    unsigned int get_fixed_keyframe_id_threshold();
+
+    /**
      * Add keyframe to the database
      * @param keyfrm
      */
@@ -323,6 +333,9 @@ private:
                                   const std::shared_ptr<keyframe>& keyfrm) const;
     bool save_associations_to_db(sqlite3* db, const std::string& table_name) const;
 
+    bool load_markers_from_db(sqlite3* db, const std::string& table_name);
+    bool save_markers_to_db(sqlite3* db, const std::string& table_name) const;
+
     //! mutex for mutual exclusion controll between class methods
     mutable std::mutex mtx_map_access_;
 
@@ -344,6 +357,9 @@ private:
 
     //! local landmarks
     std::vector<std::shared_ptr<landmark>> local_landmarks_;
+
+    //! keyframes with id less than or equal to fixed_keyframe_id_threshold are not optimized
+    unsigned int fixed_keyframe_id_threshold_ = 0;
 
     //-----------------------------------------
     // parameters for global/local mapping (optimization)

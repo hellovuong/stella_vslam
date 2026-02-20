@@ -17,12 +17,35 @@ Please complete the following information.
 
 ## To Reproduce
 
-Steps to reproduce the behavior:
+<!-- Edit the following templates -->
 
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+When running ... I get "<error>"
+
+shell session:
+
+```shell-session
+foo@~/lib/stella_vslam/build$ command
+some output ...
+"<error>"
+```
+
+build options:
+
+```
+foo@~/lib/stella_vslam/build: cat CMakeCache.txt | grep -e USE_ -e BUILD_
+BUILD_SHARED_LIBS:BOOL=ON
+BUILD_TESTS:BOOL=OFF
+BUILD_WITH_MARCH_NATIVE:BOOL=OFF
+CMAKE_BUILD_TYPE:STRING=RelWithDebInfo
+USE_ARUCO:BOOL=ON
+USE_CCACHE:BOOL=ON
+USE_GOOGLE_PERFTOOLS:BOOL=OFF
+USE_GTSAM:BOOL=ON
+USE_OPENMP:BOOL=OFF
+USE_SANITIZER:BOOL=OFF
+USE_SSE_FP_MATH:BOOL=OFF
+USE_SSE_ORB:BOOL=OFF
+```
 
 config file:
 

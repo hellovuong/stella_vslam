@@ -2,14 +2,6 @@
 #include "stella_vslam/data/graph_node.h"
 #include "stella_vslam/data/landmark.h"
 
-namespace {
-struct {
-    bool operator()(const std::pair<unsigned int, std::shared_ptr<stella_vslam::data::keyframe>>& a, const std::pair<unsigned int, std::shared_ptr<stella_vslam::data::keyframe>>& b) {
-        return a.first < b.first || (a.first == b.first && a.second != nullptr && (b.second == nullptr || a.second->id_ < b.second->id_));
-    }
-} cmp_num_shared_lms_and_keyfrm_pairs;
-} // namespace
-
 namespace stella_vslam {
 namespace data {
 
@@ -131,7 +123,8 @@ void graph_node::update_connections(unsigned int min_num_shared_lms) {
 
     // sort with number of shared landmarks and keyframe IDs for consistency; IDs are also in reverse order
     // to match selection of nearest_covisibility.
-    std::sort(num_shared_lms_and_covisibility_pairs.rbegin(), num_shared_lms_and_covisibility_pairs.rend(), cmp_num_shared_lms_and_keyfrm_pairs);
+    std::sort(num_shared_lms_and_covisibility_pairs.rbegin(), num_shared_lms_and_covisibility_pairs.rend(),
+              less_number_and_id_object_pairs<unsigned int, data::keyframe>());
 
     decltype(ordered_covisibilities_) ordered_covisibilities;
     ordered_covisibilities.reserve(num_shared_lms_and_covisibility_pairs.size());
@@ -174,7 +167,8 @@ void graph_node::update_covisibility_orders_impl() {
     }
 
     // sort with number of shared landmarks and keyframe IDs for consistency
-    std::sort(num_shared_lms_and_keyfrm_pairs.rbegin(), num_shared_lms_and_keyfrm_pairs.rend(), cmp_num_shared_lms_and_keyfrm_pairs);
+    std::sort(num_shared_lms_and_keyfrm_pairs.rbegin(), num_shared_lms_and_keyfrm_pairs.rend(),
+              less_number_and_id_object_pairs<unsigned int, data::keyframe>());
 
     ordered_covisibilities_.clear();
     ordered_covisibilities_.reserve(num_shared_lms_and_keyfrm_pairs.size());
@@ -364,9 +358,9 @@ void graph_node::recover_spanning_connections() {
     spanning_parent_.lock()->graph_node_->erase_spanning_child(owner_keyfrm_.lock());
 }
 
-std::set<std::shared_ptr<keyframe>> graph_node::get_spanning_children() const {
+id_ordered_set<std::shared_ptr<keyframe>> graph_node::get_spanning_children() const {
     std::lock_guard<std::mutex> lock(mtx_);
-    std::set<std::shared_ptr<keyframe>> locked_spanning_children;
+    id_ordered_set<std::shared_ptr<keyframe>> locked_spanning_children;
     for (const auto& keyfrm : spanning_children_) {
         locked_spanning_children.insert(keyfrm.lock());
     }
@@ -458,8 +452,8 @@ template<typename T, typename U>
 std::vector<std::shared_ptr<keyframe>> graph_node::extract_intersection(const T& keyfrms_1, const U& keyfrms_2) {
     std::vector<std::shared_ptr<keyframe>> intersection;
     intersection.reserve(std::min(keyfrms_1.size(), keyfrms_2.size()));
-    for (const auto keyfrm_1 : keyfrms_1) {
-        for (const auto keyfrm_2 : keyfrms_2) {
+    for (const auto& keyfrm_1 : keyfrms_1) {
+        for (const auto& keyfrm_2 : keyfrms_2) {
             if (*keyfrm_1 == *keyfrm_2) {
                 intersection.push_back(keyfrm_1);
             }

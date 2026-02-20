@@ -1,5 +1,7 @@
 # This is an easy scripts to run samples from scratch for Ubuntu users
 
+NOTE: These scripts do not support environments without a GPU. Please follow the [documentation](https://stella-cv.readthedocs.io/en/latest/docker.html) and install manually.
+
 # Steps
 
 ## Clone the stella_vslam
@@ -7,9 +9,7 @@
 Probablly you already run git clone, but I redisplay the procedure to show you complete steps.
 
 ```shell
-git clone https://github.com/stella-cv/stella_vslam.git
-cd stella_vslam
-git submodule update -i --recursive
+git clone --recursive https://github.com/stella-cv/stella_vslam.git
 ```
 
 ## Install docker

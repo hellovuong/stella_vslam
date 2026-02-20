@@ -21,13 +21,23 @@ namespace data {
 std::mutex map_database::mtx_database_;
 
 map_database::map_database(unsigned int min_num_shared_lms)
-    : min_num_shared_lms_(min_num_shared_lms) {
+    : fixed_keyframe_id_threshold_(0), min_num_shared_lms_(min_num_shared_lms) {
     spdlog::debug("CONSTRUCT: data::map_database");
 }
 
 map_database::~map_database() {
     clear();
     spdlog::debug("DESTRUCT: data::map_database");
+}
+
+void map_database::set_fixed_keyframe_id_threshold() {
+    std::lock_guard<std::mutex> lock(mtx_map_access_);
+    fixed_keyframe_id_threshold_ = next_keyframe_id_;
+}
+
+unsigned int map_database::get_fixed_keyframe_id_threshold() {
+    std::lock_guard<std::mutex> lock(mtx_map_access_);
+    return fixed_keyframe_id_threshold_;
 }
 
 void map_database::add_keyframe(const std::shared_ptr<keyframe>& keyfrm) {
@@ -229,6 +239,7 @@ void map_database::clear() {
 
     landmarks_.clear();
     keyframes_.clear();
+    markers_.clear();
     last_inserted_keyfrm_ = nullptr;
     local_landmarks_.clear();
     spanning_roots_.clear();
@@ -237,6 +248,7 @@ void map_database::clear() {
 
     next_keyframe_id_ = 0;
     next_landmark_id_ = 0;
+    fixed_keyframe_id_threshold_ = 0;
 
     spdlog::info("clear map database");
 }
@@ -380,13 +392,12 @@ void map_database::register_keyframe(camera_database* cam_db, orb_params_databas
     // Construct a new object
     data::bow_vector bow_vec;
     data::bow_feature_vector bow_feat_vec;
-    // Assign all the keypoints into grid
-    std::vector<std::vector<std::vector<unsigned int>>> keypt_indices_in_cells;
-    data::assign_keypoints_to_grid(camera, undist_keypts, keypt_indices_in_cells);
     // Construct frame_observation
-    frame_observation frm_obs{num_keypts, descriptors, undist_keypts, bearings, stereo_x_right, depths, keypt_indices_in_cells};
+    frame_observation frm_obs{descriptors, undist_keypts, bearings, stereo_x_right, depths};
     // Compute BoW
-    data::bow_vocabulary_util::compute_bow(bow_vocab, descriptors, bow_vec, bow_feat_vec);
+    if (bow_vocab) {
+        data::bow_vocabulary_util::compute_bow(bow_vocab, descriptors, bow_vec, bow_feat_vec);
+    }
     auto keyfrm = data::keyframe::make_keyframe(
         id, timestamp, pose_cw, camera, orb_params,
         frm_obs, bow_vec, bow_feat_vec);
@@ -509,6 +520,10 @@ bool map_database::from_db(sqlite3* db,
     if (!ok) {
         return false;
     }
+    bool have_markers = load_markers_from_db(db, "markers");
+    if (!have_markers) {
+        spdlog::warn("no such table: markers");
+    }
 
     // find root node
     std::unordered_set<unsigned int> already_found_root_ids;
@@ -592,7 +607,7 @@ void map_database::load_association_from_stmt(sqlite3_stmt* stmt) {
     auto keyfrm_id = sqlite3_column_int64(stmt, column_id);
     assert(keyframes_.count(keyfrm_id));
     column_id++;
-    std::vector<int> lm_ids(keyframes_.at(keyfrm_id)->frm_obs_.num_keypts_, -1);
+    std::vector<int> lm_ids(keyframes_.at(keyfrm_id)->frm_obs_.undist_keypts_.size(), -1);
     p = reinterpret_cast<const char*>(sqlite3_column_blob(stmt, column_id));
     std::memcpy(lm_ids.data(), p, sqlite3_column_bytes(stmt, column_id));
     column_id++;
@@ -665,9 +680,11 @@ bool map_database::to_db(sqlite3* db) const {
     bool ok = util::sqlite3_util::drop_table(db, "keyframes");
     ok = ok && util::sqlite3_util::drop_table(db, "landmarks");
     ok = ok && util::sqlite3_util::drop_table(db, "associations");
+    ok = ok && util::sqlite3_util::drop_table(db, "markers");
     ok = ok && save_keyframes_to_db(db, "keyframes");
     ok = ok && save_landmarks_to_db(db, "landmarks");
     ok = ok && save_associations_to_db(db, "associations");
+    ok = ok && save_markers_to_db(db, "markers");
     return ok;
 }
 
@@ -725,9 +742,7 @@ bool map_database::bind_association_to_stmt(sqlite3_stmt* stmt,
                                             const std::shared_ptr<keyframe>& keyfrm) const {
     int ret = SQLITE_ERROR;
     int column_id = 1;
-    if (ret == SQLITE_OK || ret == SQLITE_DONE) {
-        ret = sqlite3_bind_int64(stmt, column_id++, keyfrm->id_);
-    }
+    ret = sqlite3_bind_int64(stmt, column_id++, keyfrm->id_);
     if (ret == SQLITE_OK) {
         // extract landmark IDs
         auto lms = keyfrm->get_landmarks();
@@ -799,6 +814,48 @@ bool map_database::save_associations_to_db(sqlite3* db, const std::string& table
     }
     sqlite3_finalize(stmt);
     return util::sqlite3_util::commit(db);
+}
+
+bool map_database::save_markers_to_db(sqlite3* db, const std::string& table_name) const {
+    const auto columns = data::marker::columns();
+    bool ok = util::sqlite3_util::create_table(db, table_name, columns);
+    ok = ok && util::sqlite3_util::begin(db);
+    if (!ok) {
+        return false;
+    }
+    sqlite3_stmt* stmt = util::sqlite3_util::create_insert_stmt(db, table_name, columns);
+    if (!stmt) {
+        return false;
+    }
+
+    for (const auto& id_marker : markers_) {
+        const auto mkr = id_marker.second;
+        assert(mkr);
+        bool ok = mkr->bind_to_stmt(db, stmt);
+        ok = ok && util::sqlite3_util::next(db, stmt);
+        if (!ok) {
+            return false;
+        }
+    }
+
+    sqlite3_finalize(stmt);
+    return util::sqlite3_util::commit(db);
+}
+
+bool map_database::load_markers_from_db(sqlite3* db, const std::string& table_name) {
+    sqlite3_stmt* stmt = util::sqlite3_util::create_select_stmt(db, table_name);
+    if (!stmt) {
+        return false;
+    }
+
+    int ret = SQLITE_ERROR;
+    while ((ret = sqlite3_step(stmt)) == SQLITE_ROW) {
+        auto mkr = data::marker::from_stmt(stmt, keyframes_);
+        assert(!markers_.count(mkr->id_));
+        markers_[mkr->id_] = mkr;
+    }
+    sqlite3_finalize(stmt);
+    return ret == SQLITE_DONE;
 }
 
 } // namespace data

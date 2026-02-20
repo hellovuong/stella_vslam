@@ -111,18 +111,31 @@ public:
     //! camera model
     camera::base* camera_;
 
+    //! yaml node
+    YAML::Node tracking_yaml_;
+
     //! closest keyframes thresholds (by distance and angle) to relocalize with when updating by pose
     double reloc_distance_threshold_ = 0.2;
     double reloc_angle_threshold_ = 0.45;
 
+    //! If tracking is failed within init_retry_threshold_time_ sec after initialization, reset the system
+    double init_retry_threshold_time_ = 5.0;
+
     //! If true, automatically try to relocalize when lost
     bool enable_auto_relocalization_ = true;
+
+    //! If true, tracking with only temporal keyframes will not be treated as Lost
+    bool enable_temporal_keyframe_only_tracking_ = false;
 
     //! If true, use robust_matcher for relocalization request
     bool use_robust_matcher_for_relocalization_request_ = false;
 
     //! Max number of local keyframes for tracking
     unsigned int max_num_local_keyfrms_ = 60;
+
+    //! margin for projection matcher
+    float margin_local_map_projection_ = 5.0;
+    float margin_local_map_projection_unstable_ = 20.0;
 
     //-----------------------------------------
     // variables
@@ -141,7 +154,19 @@ protected:
     bool initialize();
 
     //! Main stream of the tracking module
-    bool track(bool relocalization_is_needed);
+    bool track(bool relocalization_is_needed,
+               unsigned int& num_tracked_lms,
+               unsigned int& num_reliable_lms,
+               const unsigned int min_num_obs_thr);
+    bool track_local_map(unsigned int& num_tracked_lms,
+                         unsigned int& num_reliable_lms,
+                         unsigned int& num_temporal_keyfrms,
+                         unsigned int min_num_obs_thr,
+                         unsigned int fixed_keyframe_id_threshold);
+    bool track_local_map_without_temporal_keyframes(unsigned int& num_tracked_lms,
+                                                    unsigned int& num_reliable_lms,
+                                                    unsigned int min_num_obs_thr,
+                                                    unsigned int fixed_keyframe_id_threshold);
 
     //! Track the current frame
     bool track_current_frame();
@@ -164,18 +189,16 @@ protected:
                                                const unsigned int min_num_obs_thr);
 
     //! Update the local map
-    void update_local_map();
+    bool update_local_map(unsigned int fixed_keyframe_id_threshold,
+                          unsigned int& num_temporal_keyfrms);
 
     //! Acquire more 2D-3D matches using initial camera pose estimation
-    void search_local_landmarks();
+    bool search_local_landmarks(unsigned int fixed_keyframe_id_threshold);
 
     //! Check the new keyframe is needed or not
     bool new_keyframe_is_needed(unsigned int num_tracked_lms,
                                 unsigned int num_reliable_lms,
                                 const unsigned int min_num_obs_thr) const;
-
-    //! Insert the new keyframe derived from the current frame
-    void insert_new_keyframe();
 
     //! mapping module
     mapping_module* mapper_ = nullptr;
@@ -194,20 +217,18 @@ protected:
     //! initializer
     module::initializer initializer_;
 
+    //! pose optimizer
+    std::shared_ptr<optimize::pose_optimizer> pose_optimizer_ = nullptr;
+
     //! frame tracker for current frame
     const module::frame_tracker frame_tracker_;
 
     //! relocalizer
     module::relocalizer relocalizer_;
 
-    //! pose optimizer
-    const optimize::pose_optimizer pose_optimizer_;
-
     //! keyframe inserter
     module::keyframe_inserter keyfrm_inserter_;
 
-    //! local keyframes
-    std::vector<std::shared_ptr<data::keyframe>> local_keyfrms_;
     //! local landmarks
     std::vector<std::shared_ptr<data::landmark>> local_landmarks_;
 

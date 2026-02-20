@@ -12,14 +12,12 @@
 namespace stella_vslam {
 namespace data {
 
-std::atomic<unsigned int> frame::next_id_{0};
-
-frame::frame(const double timestamp, camera::base* camera, feature::orb_params* orb_params,
+frame::frame(unsigned int frame_id, const double timestamp, camera::base* camera, feature::orb_params* orb_params,
              const frame_observation frm_obs, const std::unordered_map<unsigned int, marker2d>& markers_2d)
-    : id_(next_id_++), timestamp_(timestamp), camera_(camera), orb_params_(orb_params), frm_obs_(frm_obs),
+    : id_(frame_id), timestamp_(timestamp), camera_(camera), orb_params_(orb_params), frm_obs_(frm_obs),
       markers_2d_(markers_2d),
       // Initialize association with 3D points
-      landmarks_(std::vector<std::shared_ptr<landmark>>(frm_obs_.num_keypts_, nullptr)) {}
+      landmarks_(std::vector<std::shared_ptr<landmark>>(frm_obs_.undist_keypts_.size(), nullptr)) {}
 
 void frame::set_pose_cw(const Mat44_t& pose_cw) {
     pose_is_valid_ = true;
@@ -29,10 +27,6 @@ void frame::set_pose_cw(const Mat44_t& pose_cw) {
     rot_wc_ = rot_cw_.transpose();
     trans_cw_ = pose_cw_.block<3, 1>(0, 3);
     trans_wc_ = -rot_cw_.transpose() * trans_cw_;
-}
-
-void frame::set_pose_cw(const g2o::SE3Quat& pose_cw) {
-    set_pose_cw(util::converter::to_eigen_mat(pose_cw));
 }
 
 Mat44_t frame::get_pose_cw() const {

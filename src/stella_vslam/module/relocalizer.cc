@@ -4,6 +4,7 @@
 #include "stella_vslam/data/bow_database.h"
 #include "stella_vslam/module/local_map_updater.h"
 #include "stella_vslam/module/relocalizer.h"
+#include "stella_vslam/optimize/pose_optimizer_g2o.h"
 #include "stella_vslam/util/fancy_index.h"
 
 #include <spdlog/spdlog.h>
@@ -11,24 +12,41 @@
 namespace stella_vslam {
 namespace module {
 
-relocalizer::relocalizer(const double bow_match_lowe_ratio, const double proj_match_lowe_ratio,
+relocalizer::relocalizer(const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer,
+                         const double bow_match_lowe_ratio, const double proj_match_lowe_ratio,
                          const double robust_match_lowe_ratio,
                          const unsigned int min_num_bow_matches, const unsigned int min_num_valid_obs,
-                         const bool use_fixed_seed)
+                         const bool use_fixed_seed,
+                         const bool search_neighbor,
+                         const unsigned int top_n_covisibilities_to_search,
+                         const float num_common_words_thr_ratio,
+                         const unsigned int max_num_ransac_iter,
+                         const unsigned int max_num_local_keyfrms)
     : min_num_bow_matches_(min_num_bow_matches), min_num_valid_obs_(min_num_valid_obs),
       bow_matcher_(bow_match_lowe_ratio, false), proj_matcher_(proj_match_lowe_ratio, false),
       robust_matcher_(robust_match_lowe_ratio, false),
-      pose_optimizer_(), use_fixed_seed_(use_fixed_seed) {
+      pose_optimizer_(pose_optimizer), use_fixed_seed_(use_fixed_seed),
+      search_neighbor_(search_neighbor),
+      top_n_covisibilities_to_search_(top_n_covisibilities_to_search),
+      num_common_words_thr_ratio_(num_common_words_thr_ratio),
+      max_num_ransac_iter_(max_num_ransac_iter),
+      max_num_local_keyfrms_(max_num_local_keyfrms) {
     spdlog::debug("CONSTRUCT: module::relocalizer");
 }
 
-relocalizer::relocalizer(const YAML::Node& yaml_node)
-    : relocalizer(yaml_node["bow_match_lowe_ratio"].as<double>(0.75),
+relocalizer::relocalizer(const std::shared_ptr<optimize::pose_optimizer>& pose_optimizer, const YAML::Node& yaml_node)
+    : relocalizer(pose_optimizer,
+                  yaml_node["bow_match_lowe_ratio"].as<double>(0.75),
                   yaml_node["proj_match_lowe_ratio"].as<double>(0.9),
                   yaml_node["robust_match_lowe_ratio"].as<double>(0.8),
                   yaml_node["min_num_bow_matches"].as<unsigned int>(20),
                   yaml_node["min_num_valid_obs"].as<unsigned int>(50),
-                  yaml_node["use_fixed_seed"].as<bool>(false)) {
+                  yaml_node["use_fixed_seed"].as<bool>(false),
+                  yaml_node["search_neighbor"].as<bool>(true),
+                  yaml_node["top_n_covisibilities_to_search"].as<unsigned int>(10),
+                  yaml_node["num_common_words_thr_ratio"].as<float>(0.8f),
+                  yaml_node["max_num_ransac_iter"].as<unsigned int>(30),
+                  yaml_node["max_num_local_keyfrms"].as<unsigned int>(60)) {
 }
 
 relocalizer::~relocalizer() {
@@ -37,7 +55,7 @@ relocalizer::~relocalizer() {
 
 bool relocalizer::relocalize(data::bow_database* bow_db, data::frame& curr_frm) {
     // Acquire relocalization candidates
-    const auto reloc_candidates = bow_db->acquire_keyframes(curr_frm.bow_vec_);
+    const auto reloc_candidates = bow_db->acquire_keyframes(curr_frm.bow_vec_, 0.0f, num_common_words_thr_ratio_);
     if (reloc_candidates.empty()) {
         return false;
     }
@@ -62,7 +80,7 @@ bool relocalizer::reloc_by_candidates(data::frame& curr_frm,
 
         bool ok = reloc_by_candidate(curr_frm, candidate_keyfrm, use_robust_matcher);
         if (ok) {
-            spdlog::info("relocalization succeeded (id={})", candidate_keyfrm->id_);
+            spdlog::info("relocalization succeeded (frame={}, keyframe={})", curr_frm.id_, candidate_keyfrm->id_);
             // TODO: should set the reference keyframe of the current frame
             return true;
         }
@@ -126,6 +144,49 @@ bool relocalizer::relocalize_by_pnp_solver(data::frame& curr_frm,
         return false;
     }
 
+    if (search_neighbor_) {
+        // Search additional association from neighbor keyframes
+        auto ngh_keyfrms = candidate_keyfrm->graph_node_->get_top_n_covisibilities(top_n_covisibilities_to_search_);
+        std::unordered_set<unsigned int> already_found_landmark_ids;
+        for (const auto& lm : matched_landmarks) {
+            if (!lm) {
+                continue;
+            }
+            if (lm->will_be_erased()) {
+                continue;
+            }
+            already_found_landmark_ids.insert(lm->id_);
+        }
+
+        for (const auto& ngh_keyfrm : ngh_keyfrms) {
+            std::vector<std::shared_ptr<data::landmark>> additional_matched_landmarks;
+            const auto num_additional_matches = use_robust_matcher ? robust_matcher_.match_frame_and_keyframe(curr_frm, ngh_keyfrm, additional_matched_landmarks)
+                                                                   : bow_matcher_.match_frame_and_keyframe(ngh_keyfrm, curr_frm, additional_matched_landmarks);
+            assert(matched_landmarks.size() == additional_matched_landmarks.size());
+            int num_associated = 0;
+            for (unsigned int idx = 0; idx < matched_landmarks.size(); ++idx) {
+                auto lm = additional_matched_landmarks.at(idx);
+                if (!lm) {
+                    continue;
+                }
+                if (lm->will_be_erased()) {
+                    continue;
+                }
+                if (already_found_landmark_ids.count(lm->id_)) {
+                    continue;
+                }
+                // Add new association only if there is no matching landmark
+                if (matched_landmarks[idx] != nullptr) {
+                    continue;
+                }
+                matched_landmarks[idx] = lm;
+                already_found_landmark_ids.insert(lm->id_);
+                num_associated++;
+            }
+            SPDLOG_TRACE("Number of additional 2D-3D matches (detected={}, associated={}). neighbor keyframe={}", num_additional_matches, num_associated, ngh_keyfrm->id_);
+        }
+    }
+
     // Setup an PnP solver with the current 2D-3D matches
     const auto valid_indices = extract_valid_indices(matched_landmarks);
     auto pnp_solver = setup_pnp_solver(valid_indices, curr_frm.frm_obs_.bearings_, curr_frm.frm_obs_.undist_keypts_,
@@ -133,7 +194,7 @@ bool relocalizer::relocalize_by_pnp_solver(data::frame& curr_frm,
 
     // 1. Estimate the camera pose using EPnP (+ RANSAC)
 
-    pnp_solver->find_via_ransac(30, false);
+    pnp_solver->find_via_ransac(max_num_ransac_iter_, false);
     if (!pnp_solver->solution_is_valid()) {
         spdlog::debug("solution is not valid. candidate keyframe id is {}", candidate_keyfrm->id_);
         return false;
@@ -151,8 +212,8 @@ bool relocalizer::optimize_pose(data::frame& curr_frm,
                                 const std::shared_ptr<stella_vslam::data::keyframe>& candidate_keyfrm,
                                 std::vector<bool>& outlier_flags) const {
     // Pose optimization
-    g2o::SE3Quat optimized_pose;
-    auto num_valid_obs = pose_optimizer_.optimize(curr_frm, optimized_pose, outlier_flags);
+    Mat44_t optimized_pose;
+    auto num_valid_obs = pose_optimizer_->optimize(curr_frm, optimized_pose, outlier_flags);
     curr_frm.set_pose_cw(optimized_pose);
 
     // Discard the candidate if the number of the inliers is less than the threshold
@@ -162,7 +223,7 @@ bool relocalizer::optimize_pose(data::frame& curr_frm,
     }
 
     // Reject outliers
-    for (unsigned int idx = 0; idx < curr_frm.frm_obs_.num_keypts_; idx++) {
+    for (unsigned int idx = 0; idx < curr_frm.frm_obs_.undist_keypts_.size(); idx++) {
         if (!outlier_flags.at(idx)) {
             continue;
         }
@@ -187,15 +248,15 @@ bool relocalizer::refine_pose(data::frame& curr_frm,
         return false;
     }
 
-    g2o::SE3Quat optimized_pose1;
+    Mat44_t optimized_pose1;
     std::vector<bool> outlier_flags1;
-    auto num_valid_obs1 = pose_optimizer_.optimize(curr_frm, optimized_pose1, outlier_flags1);
+    auto num_valid_obs1 = pose_optimizer_->optimize(curr_frm, optimized_pose1, outlier_flags1);
     SPDLOG_TRACE("refine_pose: num_valid_obs1={}", num_valid_obs1);
     curr_frm.set_pose_cw(optimized_pose1);
 
     // Exclude the already-associated landmarks
     std::set<std::shared_ptr<data::landmark>> already_found_landmarks1;
-    for (unsigned int idx = 0; idx < curr_frm.frm_obs_.num_keypts_; ++idx) {
+    for (unsigned int idx = 0; idx < curr_frm.frm_obs_.undist_keypts_.size(); ++idx) {
         const auto& lm = curr_frm.get_landmark(idx);
         if (!lm) {
             continue;
@@ -212,9 +273,9 @@ bool relocalizer::refine_pose(data::frame& curr_frm,
     }
 
     // Perform optimization again
-    g2o::SE3Quat optimized_pose2;
+    Mat44_t optimized_pose2;
     std::vector<bool> outlier_flags2;
-    auto num_valid_obs2 = pose_optimizer_.optimize(curr_frm, optimized_pose2, outlier_flags2);
+    auto num_valid_obs2 = pose_optimizer_->optimize(curr_frm, optimized_pose2, outlier_flags2);
     SPDLOG_TRACE("refine_pose: num_valid_obs2={}", num_valid_obs2);
     curr_frm.set_pose_cw(optimized_pose2);
 
@@ -225,7 +286,7 @@ bool relocalizer::refine_pose(data::frame& curr_frm,
     }
 
     // Reject outliers
-    for (unsigned int idx = 0; idx < curr_frm.frm_obs_.num_keypts_; ++idx) {
+    for (unsigned int idx = 0; idx < curr_frm.frm_obs_.undist_keypts_.size(); ++idx) {
         if (!outlier_flags2.at(idx)) {
             continue;
         }
@@ -238,9 +299,8 @@ bool relocalizer::refine_pose(data::frame& curr_frm,
 bool relocalizer::refine_pose_by_local_map(data::frame& curr_frm,
                                            const std::shared_ptr<stella_vslam::data::keyframe>& candidate_keyfrm) const {
     // Create local map
-    constexpr unsigned int max_num_local_keyfrms = 10;
-    auto local_map_updater = module::local_map_updater(curr_frm, max_num_local_keyfrms);
-    if (!local_map_updater.acquire_local_map()) {
+    auto local_map_updater = module::local_map_updater(max_num_local_keyfrms_);
+    if (!local_map_updater.acquire_local_map(curr_frm.get_landmarks())) {
         return false;
     }
     auto local_keyfrms = local_map_updater.get_local_keyframes();
@@ -272,7 +332,7 @@ bool relocalizer::refine_pose_by_local_map(data::frame& curr_frm,
         unsigned int pred_scale_level;
         eigen_alloc_unord_map<unsigned int, Vec2_t> lm_to_reproj;
         std::unordered_map<unsigned int, float> lm_to_x_right;
-        std::unordered_map<unsigned int, int> lm_to_scale;
+        std::unordered_map<unsigned int, unsigned int> lm_to_scale;
         for (const auto& lm : local_landmarks) {
             if (curr_landmark_ids.count(lm->id_)) {
                 continue;
@@ -301,13 +361,13 @@ bool relocalizer::refine_pose_by_local_map(data::frame& curr_frm,
         auto num_additional_matches = projection_matcher.match_frame_and_landmarks(curr_frm, local_landmarks, lm_to_reproj, lm_to_x_right, lm_to_scale, margin);
 
         // optimize the pose
-        g2o::SE3Quat optimized_pose;
+        Mat44_t optimized_pose;
         std::vector<bool> outlier_flags;
-        auto num_valid_obs = pose_optimizer_.optimize(curr_frm, optimized_pose, outlier_flags);
+        auto num_valid_obs = pose_optimizer_->optimize(curr_frm, optimized_pose, outlier_flags);
         curr_frm.set_pose_cw(optimized_pose);
 
         // Reject outliers
-        for (unsigned int idx = 0; idx < curr_frm.frm_obs_.num_keypts_; ++idx) {
+        for (unsigned int idx = 0; idx < curr_frm.frm_obs_.undist_keypts_.size(); ++idx) {
             if (!outlier_flags.at(idx)) {
                 continue;
             }
@@ -352,13 +412,17 @@ std::unique_ptr<solve::pnp_solver> relocalizer::setup_pnp_solver(const std::vect
     // Resample valid elements
     const auto valid_bearings = util::resample_by_indices(bearings, valid_indices);
     const auto valid_keypts = util::resample_by_indices(keypts, valid_indices);
-    const auto valid_assoc_lms = util::resample_by_indices(matched_landmarks, valid_indices);
-    eigen_alloc_vector<Vec3_t> valid_landmarks(valid_indices.size());
+    std::vector<int> octaves(valid_indices.size());
     for (unsigned int i = 0; i < valid_indices.size(); ++i) {
-        valid_landmarks.at(i) = valid_assoc_lms.at(i)->get_pos_in_world();
+        octaves.at(i) = valid_keypts.at(i).octave;
+    }
+    const auto valid_assoc_lms = util::resample_by_indices(matched_landmarks, valid_indices);
+    eigen_alloc_vector<Vec3_t> valid_points(valid_indices.size());
+    for (unsigned int i = 0; i < valid_indices.size(); ++i) {
+        valid_points.at(i) = valid_assoc_lms.at(i)->get_pos_in_world();
     }
     // Setup PnP solver
-    return std::unique_ptr<solve::pnp_solver>(new solve::pnp_solver(valid_bearings, valid_keypts, valid_landmarks, scale_factors, use_fixed_seed_));
+    return std::unique_ptr<solve::pnp_solver>(new solve::pnp_solver(valid_bearings, octaves, valid_points, scale_factors, 10, use_fixed_seed_));
 }
 
 } // namespace module

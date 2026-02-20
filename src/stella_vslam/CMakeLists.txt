@@ -1,8 +1,5 @@
 # ----- Find dependencies -----
 
-# spdlog
-set(spdlog_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/3rd/spdlog/include)
-
 # json
 set(json_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/3rd/json/include)
 
@@ -26,6 +23,18 @@ find_package(g2o REQUIRED
              OPTIONAL_COMPONENTS
              g2o::csparse)
 
+# gtsam
+set(USE_GTSAM OFF CACHE BOOL "Enable gtsam")
+unset(GTSAM_INCLUDE_DIRS CACHE)
+find_path(GTSAM_INCLUDE_DIRS NAMES gtsam
+          PATHS /usr/local/include/)
+if(USE_GTSAM AND GTSAM_INCLUDE_DIRS)
+    message(STATUS "gtsam: enabled (Found in ${GTSAM_INCLUDE_DIRS})")
+else()
+    set(USE_GTSAM OFF)
+    message(STATUS "gtsam: disabled")
+endif()
+
 # Check first if CSparse is built from g2o
 if(TARGET g2o::csparse)
     set(${CXSPARSE_LIBRARIES} g2o::csparse)
@@ -36,13 +45,15 @@ else()
         include_directories(${CXSPARSE_INCLUDE_DIRS})
     endif()
     # SuiteSparse for g2o
-    if(MSVC)
-        find_package(SuiteSparse CONFIG)
-    else()
-        find_package(SuiteSparse)
-    endif()
-    if(SUITESPARSE_FOUND)
-        include_directories(${SUITESPARSE_INCLUDE_DIRS})
+    if(NOT SUITESPARSE_FOUND)
+        if(MSVC)
+            find_package(SuiteSparse CONFIG)
+        else()
+            find_package(SuiteSparse)
+        endif()
+        if(SUITESPARSE_FOUND)
+            include_directories(${SUITESPARSE_INCLUDE_DIRS})
+        endif()
     endif()
 endif()
 
@@ -56,6 +67,18 @@ elseif(BOW_FRAMEWORK MATCHES "FBoW")
     endif()
 else()
     message(FATAL_ERROR "Invalid BoW framework: ${BOW_FRAMEWORK}")
+endif()
+
+# cuda_efficient_features
+set(USE_CUDA_EFFICIENT_DESCRIPTORS OFF CACHE BOOL "Enable cuda_efficient_features")
+find_path(cuda_efficient_features_INCLUDE_DIR NAMES cuda_efficient_features.h)
+find_library(cuda_efficient_features_LIBRARY NAMES cuda_efficient_features)
+find_package_handle_standard_args(cuda_efficient_features DEFAULT_MSG cuda_efficient_features_LIBRARY cuda_efficient_features_INCLUDE_DIR)
+if(USE_CUDA_EFFICIENT_DESCRIPTORS AND cuda_efficient_features_FOUND)
+    message(STATUS "cuda_efficient_features: enabled")
+else()
+    message(STATUS "cuda_efficient_features: disabled")
+    set(USE_CUDA_EFFICIENT_DESCRIPTORS OFF)
 endif()
 
 # ----- Create stella_vslam library -----
@@ -80,6 +103,18 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
                       LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 
 # ----- Compile configuration -----
+
+# cuda_efficient_features
+if (USE_CUDA_EFFICIENT_DESCRIPTORS)
+    find_package(OpenCV REQUIRED core features2d cudev cudafilters cudaimgproc cudawarping)
+    find_package(CUDAToolkit REQUIRED)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC USE_CUDA_EFFICIENT_DESCRIPTORS)
+endif ()
+
+# gtsam
+if (USE_GTSAM)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC USE_GTSAM)
+endif()
 
 # OpenMP
 set(USE_OPENMP OFF CACHE BOOL "Use OpenMP")
@@ -153,6 +188,20 @@ else()
     message(STATUS "Determinism: DISABLED")
 endif()
 
+# Tracy
+set(USE_TRACY OFF CACHE BOOL "Enable tracy")
+if(USE_TRACY)
+    message(STATUS "tracy: ENABLED")
+    # Gperftools
+    find_package(Tracy REQUIRED)
+else()
+    message(STATUS "tracy: DISABLED")
+endif()
+if(USE_TRACY)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE -DTRACY_ENABLE=1)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Tracy::TracyClient)
+endif()
+
 # ----- Configure stella_vslam library -----
 
 # Include directories
@@ -160,10 +209,10 @@ target_include_directories(${PROJECT_NAME}
                            PUBLIC
                            "$<BUILD_INTERFACE:${json_INCLUDE_DIR}>"
                            "$<BUILD_INTERFACE:${tinycolormap_INCLUDE_DIR}>"
-                           "$<BUILD_INTERFACE:${spdlog_INCLUDE_DIR}>"
+                           "$<$<NOT:$<BOOL:${spdlog_FOUND}>>:$<BUILD_INTERFACE:${spdlog_INCLUDE_DIR}>>"
                            "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/>"
                            "$<INSTALL_INTERFACE:include/stella_vslam/3rd/json/include>"
-                           "$<INSTALL_INTERFACE:include/stella_vslam/3rd/spdlog/include>"
+                           "$<$<NOT:$<BOOL:${spdlog_FOUND}>>:$<INSTALL_INTERFACE:include/stella_vslam/3rd/spdlog/include>>"
                            "$<INSTALL_INTERFACE:include/>")
 
 # Link to required libraries
@@ -177,7 +226,8 @@ target_link_libraries(${PROJECT_NAME}
                       opencv_core
                       opencv_features2d
                       opencv_calib3d
-                      "$<$<BOOL:${USE_ARUCO}>:opencv_aruco>"
+                      "$<$<BOOL:${LINK_OBJDETECT}>:opencv_objdetect>"
+                      "$<$<BOOL:${LINK_ARUCO}>:opencv_aruco>"
                       g2o::core
                       g2o::stuff
                       g2o::types_sba
@@ -186,11 +236,15 @@ target_link_libraries(${PROJECT_NAME}
                       g2o::solver_eigen
                       g2o::solver_csparse
                       g2o::csparse_extension
+                      "$<$<BOOL:${USE_GTSAM}>:gtsam>"
                       ${CXSPARSE_LIBRARIES}
                       ${SUITESPARSE_LIBRARIES}
                       ${BoW_LIBRARY}
+                      "$<$<BOOL:${spdlog_FOUND}>:spdlog::spdlog>"
+                      "$<$<BOOL:${USE_CUDA_EFFICIENT_DESCRIPTORS}>:${cuda_efficient_features_LIBRARY};opencv_cudafilters;opencv_cudawarping>"
                       PRIVATE
-                      ${LAPACK_LIBRARIES})
+                      ${LAPACK_LIBRARIES}
+                      "$<$<BOOL:${USE_CUDA_EFFICIENT_DESCRIPTORS}>:CUDA::cudart;CUDA::cublas>")
 
 # ----- Install configuration -----
 
@@ -211,10 +265,10 @@ install(FILES ${HEADERS}
 # Install 3rd party headers
 install(FILES ${json_INCLUDE_DIR}/nlohmann/json.hpp ${json_INCLUDE_DIR}/nlohmann/json_fwd.hpp
         DESTINATION ${STELLA_VSLAM_INCLUDE_INSTALL_DIR}/3rd/json/include/nlohmann)
-install(DIRECTORY ${tinycolormap_INCLUDE_DIR}
-        DESTINATION ${STELLA_VSLAM_INCLUDE_INSTALL_DIR}/3rd/tinycolormap)
-install(DIRECTORY ${spdlog_INCLUDE_DIR}
-        DESTINATION ${STELLA_VSLAM_INCLUDE_INSTALL_DIR}/3rd/spdlog)
+if(NOT spdlog_FOUND)
+  install(DIRECTORY ${spdlog_INCLUDE_DIR}
+          DESTINATION ${STELLA_VSLAM_INCLUDE_INSTALL_DIR}/3rd/spdlog)
+endif()
 
 # ----- Append subdirectory -----
 

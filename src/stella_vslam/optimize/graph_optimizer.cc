@@ -19,8 +19,9 @@
 namespace stella_vslam {
 namespace optimize {
 
-graph_optimizer::graph_optimizer(const bool fix_scale)
-    : fix_scale_(fix_scale) {}
+graph_optimizer::graph_optimizer(const YAML::Node& yaml_node, const bool fix_scale)
+    : fix_scale_(fix_scale),
+      min_num_shared_lms_(yaml_node["min_num_shared_lms"].as<unsigned int>(100)) {}
 
 void graph_optimizer::optimize(const std::shared_ptr<data::keyframe>& loop_keyfrm, const std::shared_ptr<data::keyframe>& curr_keyfrm,
                                const module::keyframe_Sim3_pairs_t& non_corrected_Sim3s,
@@ -29,8 +30,8 @@ void graph_optimizer::optimize(const std::shared_ptr<data::keyframe>& loop_keyfr
                                std::unordered_map<unsigned int, unsigned int>& found_lm_to_ref_keyfrm_id) const {
     // 1. Construct an optimizer
 
-    auto linear_solver = g2o::make_unique<g2o::LinearSolverCSparse<g2o::BlockSolver_7_3::PoseMatrixType>>();
-    auto block_solver = g2o::make_unique<g2o::BlockSolver_7_3>(std::move(linear_solver));
+    auto linear_solver = stella_vslam::make_unique<g2o::LinearSolverCSparse<g2o::BlockSolver_7_3::PoseMatrixType>>();
+    auto block_solver = stella_vslam::make_unique<g2o::BlockSolver_7_3>(std::move(linear_solver));
     auto algorithm = new g2o::OptimizationAlgorithmLevenberg(std::move(block_solver));
 
     g2o::SparseOptimizer optimizer;
@@ -66,8 +67,6 @@ void graph_optimizer::optimize(const std::shared_ptr<data::keyframe>& loop_keyfr
     // Save the added vertices
     std::unordered_map<unsigned int, internal::sim3::shot_vertex*> vertices;
 
-    constexpr int min_num_shared_lms = 100;
-
     for (auto keyfrm : all_keyfrms) {
         if (keyfrm->will_be_erased()) {
             continue;
@@ -94,7 +93,7 @@ void graph_optimizer::optimize(const std::shared_ptr<data::keyframe>& loop_keyfr
         }
 
         // Fix the loop keyframe or root keyframe
-        if (*keyfrm == *loop_keyfrm || keyfrm->graph_node_->is_spanning_root()) {
+        if (*keyfrm == *loop_keyfrm || *keyfrm == *curr_keyfrm || keyfrm->graph_node_->is_spanning_root()) {
             keyfrm_vtx->setFixed(true);
         }
 
@@ -140,7 +139,7 @@ void graph_optimizer::optimize(const std::shared_ptr<data::keyframe>& loop_keyfr
             // Except the current vs loop edges,
             // Add the loop edges only over the minimum number of shared landmarks threshold
             if (!(id1 == curr_keyfrm->id_ && id2 == loop_keyfrm->id_)
-                && keyfrm->graph_node_->get_num_shared_landmarks(connected_keyfrm) < min_num_shared_lms) {
+                && keyfrm->graph_node_->get_num_shared_landmarks(connected_keyfrm) < min_num_shared_lms_) {
                 continue;
             }
 
@@ -166,11 +165,6 @@ void graph_optimizer::optimize(const std::shared_ptr<data::keyframe>& loop_keyfr
         auto parent_node = keyfrm->graph_node_->get_spanning_parent();
         if (parent_node) {
             const auto id2 = parent_node->id_;
-
-            // Avoid duplication
-            if (id1 <= id2) {
-                continue;
-            }
 
             // Use only non-modified poses in the covisibility information
             // (Both camera poses should be nop-modified in order to compute the relative pose correctly)
@@ -207,7 +201,7 @@ void graph_optimizer::optimize(const std::shared_ptr<data::keyframe>& loop_keyfr
         }
 
         // Add the covisibility information over the minimum number of shared landmarks threshold
-        const auto connected_keyfrms = keyfrm->graph_node_->get_covisibilities_over_min_num_shared_lms(min_num_shared_lms);
+        const auto connected_keyfrms = keyfrm->graph_node_->get_covisibilities_over_min_num_shared_lms(min_num_shared_lms_);
         for (auto connected_keyfrm : connected_keyfrms) {
             // null check
             if (!connected_keyfrm || !parent_node) {

@@ -15,7 +15,7 @@
 namespace stella_vslam {
 namespace io {
 
-void map_database_io_sqlite3::save(const std::string& path,
+bool map_database_io_sqlite3::save(const std::string& path,
                                    const data::camera_database* const cam_db,
                                    const data::orb_params_database* const orb_params_db,
                                    const data::map_database* const map_db) {
@@ -28,7 +28,7 @@ void map_database_io_sqlite3::save(const std::string& path,
     int ret = sqlite3_open(path.c_str(), &db);
     if (ret != SQLITE_OK) {
         spdlog::error("Failed to open SQL database");
-        return;
+        return false;
     }
 
     // Write data into database
@@ -43,23 +43,24 @@ void map_database_io_sqlite3::save(const std::string& path,
     else {
         spdlog::info("Failed save the map database");
     }
+    return ok;
 }
 
-void map_database_io_sqlite3::load(const std::string& path,
+bool map_database_io_sqlite3::load(const std::string& path,
                                    data::camera_database* cam_db,
                                    data::orb_params_database* orb_params_db,
                                    data::map_database* map_db,
                                    data::bow_database* bow_db,
                                    data::bow_vocabulary* bow_vocab) {
     std::lock_guard<std::mutex> lock(data::map_database::mtx_database_);
-    assert(cam_db && map_db && bow_db && bow_vocab);
+    assert(cam_db && map_db);
 
     // Open database
     sqlite3* db = nullptr;
     int ret = sqlite3_open(path.c_str(), &db);
     if (ret != SQLITE_OK) {
         spdlog::error("Failed to open SQL database");
-        return;
+        return false;
     }
 
     // load from database
@@ -68,7 +69,7 @@ void map_database_io_sqlite3::load(const std::string& path,
     ok = ok && load_stats(db, map_db);
 
     // update bow database
-    if (ok) {
+    if (ok && bow_db) {
         const auto keyfrms = map_db->get_all_keyframes();
         for (const auto& keyfrm : keyfrms) {
             bow_db->add_keyframe(keyfrm);
@@ -76,6 +77,7 @@ void map_database_io_sqlite3::load(const std::string& path,
     }
 
     sqlite3_close(db);
+    return ok;
 }
 
 bool map_database_io_sqlite3::save_stats(sqlite3* db, const data::map_database* map_db) const {

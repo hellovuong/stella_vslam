@@ -1,6 +1,7 @@
 #include "stella_vslam/mapping_module.h"
 #include "stella_vslam/data/keyframe.h"
 #include "stella_vslam/data/landmark.h"
+#include "stella_vslam/data/marker.h"
 #include "stella_vslam/data/map_database.h"
 #include "stella_vslam/module/loop_bundle_adjuster.h"
 #include "stella_vslam/optimize/global_bundle_adjuster.h"
@@ -12,8 +13,14 @@
 namespace stella_vslam {
 namespace module {
 
-loop_bundle_adjuster::loop_bundle_adjuster(data::map_database* map_db, const unsigned int num_iter)
-    : map_db_(map_db), num_iter_(num_iter) {}
+loop_bundle_adjuster::loop_bundle_adjuster(data::map_database* map_db,
+                                           const unsigned int num_iter,
+                                           const bool use_huber_kernel,
+                                           const bool verbose)
+    : map_db_(map_db),
+      num_iter_(num_iter),
+      use_huber_kernel_(use_huber_kernel),
+      verbose_(verbose) {}
 
 void loop_bundle_adjuster::set_mapping_module(mapping_module* mapper) {
     mapper_ = mapper;
@@ -40,13 +47,18 @@ void loop_bundle_adjuster::optimize(const std::shared_ptr<data::keyframe>& curr_
 
     std::unordered_set<unsigned int> optimized_keyfrm_ids;
     std::unordered_set<unsigned int> optimized_landmark_ids;
+    std::unordered_set<unsigned int> optimized_marker_ids;
     eigen_alloc_unord_map<unsigned int, Vec3_t> lm_to_pos_w_after_global_BA;
     eigen_alloc_unord_map<unsigned int, Mat44_t> keyfrm_to_pose_cw_after_global_BA;
-    const auto global_BA = optimize::global_bundle_adjuster(num_iter_, false);
+    eigen_alloc_unord_map<unsigned int, std::array<Vec3_t, 4>> marker_to_pos_w_after_global_BA;
+    const auto global_BA = optimize::global_bundle_adjuster(num_iter_, use_huber_kernel_, verbose_);
     bool ok = global_BA.optimize(curr_keyfrm->graph_node_->get_keyframes_from_root(),
                                  optimized_keyfrm_ids, optimized_landmark_ids,
+                                 optimized_marker_ids,
                                  lm_to_pos_w_after_global_BA,
-                                 keyfrm_to_pose_cw_after_global_BA, &abort_loop_BA_);
+                                 keyfrm_to_pose_cw_after_global_BA,
+                                 marker_to_pos_w_after_global_BA,
+                                 &abort_loop_BA_);
 
     {
         std::lock_guard<std::mutex> lock1(mtx_thread_);
@@ -156,6 +168,36 @@ void loop_bundle_adjuster::optimize(const std::shared_ptr<data::keyframe>& curr_
                 lm->set_pos_in_world(rot_wc * pos_c + trans_wc);
             }
             lm->update_mean_normal_and_obs_scale_variance();
+        }
+
+        spdlog::debug("update the positions of the markers");
+
+        std::unordered_set<unsigned int> already_found_marker_ids;
+        std::vector<std::shared_ptr<data::marker>> markers;
+        for (const auto& keyfrm : keyfrms) {
+            for (const auto& mkr : keyfrm->get_markers()) {
+                if (!mkr) {
+                    continue;
+                }
+                if (already_found_marker_ids.count(mkr->id_)) {
+                    continue;
+                }
+
+                already_found_marker_ids.insert(mkr->id_);
+                markers.push_back(mkr);
+            }
+        }
+
+        for (const auto& mkr : markers) {
+            if (!optimized_marker_ids.count(mkr->id_)) {
+                continue;
+            }
+
+            // Update all corners
+            const std::array<Vec3_t, 4>& new_corners = marker_to_pos_w_after_global_BA.at(mkr->id_);
+            for (size_t corner_idx = 0; corner_idx < 4; corner_idx++) {
+                mkr->corners_pos_w_[corner_idx] = new_corners[corner_idx];
+            }
         }
 
         mapper_->resume();

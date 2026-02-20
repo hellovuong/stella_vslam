@@ -24,13 +24,13 @@ using namespace stella_vslam;
 
 TEST(orb_extractor, extract_toy_sample_1) {
     const auto params = feature::orb_params("ORB setting for test");
-    auto extractor = feature::orb_extractor(&params, 1000);
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB);
 
     // image
     auto img = cv::Mat(600, 600, CV_8UC1);
     img = 255;
     cv::rectangle(img, cv::Point2i(300, 300), cv::Point2i(600, 600), cv::Scalar(0), -1, cv::LINE_AA);
-    // mask (無効)
+    // mask (disabled)
     const auto mask = cv::Mat();
 
     std::vector<cv::KeyPoint> keypts;
@@ -42,7 +42,7 @@ TEST(orb_extractor, extract_toy_sample_1) {
     EXPECT_EQ(keypts.size(), desc.rows);
     EXPECT_EQ(desc.type(), CV_8U);
 
-    // スケールを考慮して誤差を測定
+    // evaluate error with scale
     for (const auto& keypt : keypts) {
         EXPECT_NEAR(keypt.pt.x, 300, 2.0 * params.scale_factors_.at(keypt.octave));
         EXPECT_NEAR(keypt.pt.y, 300, 2.0 * params.scale_factors_.at(keypt.octave));
@@ -51,13 +51,13 @@ TEST(orb_extractor, extract_toy_sample_1) {
 
 TEST(orb_extractor, extract_toy_sample_2) {
     const auto params = feature::orb_params("ORB setting for test");
-    auto extractor = feature::orb_extractor(&params, 1000);
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB);
 
     // image
     auto img = cv::Mat(2000, 2000, CV_8UC1);
     img = 255;
     cv::rectangle(img, cv::Point2i(0, 0), cv::Point2i(1800, 1800), cv::Scalar(0), -1, cv::LINE_AA);
-    // mask (無効)
+    // mask (disabled)
     const auto mask = cv::Mat();
 
     std::vector<cv::KeyPoint> keypts;
@@ -69,7 +69,7 @@ TEST(orb_extractor, extract_toy_sample_2) {
     EXPECT_EQ(keypts.size(), desc.rows);
     EXPECT_EQ(desc.type(), CV_8U);
 
-    // スケールを考慮して誤差を測定
+    // evaluate error with scale
     for (const auto& keypt : keypts) {
         EXPECT_NEAR(keypt.pt.x, 1800, 2.0 * params.scale_factors_.at(keypt.octave));
         EXPECT_NEAR(keypt.pt.y, 1800, 2.0 * params.scale_factors_.at(keypt.octave));
@@ -78,11 +78,11 @@ TEST(orb_extractor, extract_toy_sample_2) {
 
 TEST(orb_extractor, extract_without_mask_1) {
     const auto params = feature::orb_params("ORB setting for test");
-    auto extractor = feature::orb_extractor(&params, 1000);
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB);
 
     // image
     const auto img = cv::imread(std::string(TEST_DATA_DIR) + "./equirectangular_image_001.jpg", cv::IMREAD_GRAYSCALE);
-    // mask (無効)
+    // mask (disabled)
     const auto mask = cv::Mat();
 
     std::vector<cv::KeyPoint> keypts;
@@ -97,11 +97,11 @@ TEST(orb_extractor, extract_without_mask_1) {
 
 TEST(orb_extractor, extract_without_mask_2) {
     const auto params = feature::orb_params("ORB setting for test");
-    auto extractor = feature::orb_extractor(&params, 1000);
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB);
 
     // image
     const auto img = cv::imread(std::string(TEST_DATA_DIR) + "./equirectangular_image_002.jpg", cv::IMREAD_GRAYSCALE);
-    // mask (無効)
+    // mask (disabled)
     const auto mask = cv::Mat();
 
     std::vector<cv::KeyPoint> keypts;
@@ -116,11 +116,11 @@ TEST(orb_extractor, extract_without_mask_2) {
 
 TEST(orb_extractor, extract_with_image_mask_1) {
     const auto params = feature::orb_params("ORB setting for test");
-    auto extractor = feature::orb_extractor(&params, 1000);
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB);
 
     // image
     const auto img = cv::imread(std::string(TEST_DATA_DIR) + "./equirectangular_image_001.jpg", cv::IMREAD_GRAYSCALE);
-    // mask (上下25%をマスク)
+    // mask (Mask 25% of top and bottom)
     auto mask = cv::Mat(img.rows, img.cols, CV_8UC1);
     mask = 1;
     mask.rowRange(0, img.rows / 4) = 0;
@@ -135,7 +135,7 @@ TEST(orb_extractor, extract_with_image_mask_1) {
     EXPECT_EQ(keypts.size(), desc.rows);
     EXPECT_EQ(desc.type(), CV_8U);
 
-    // mask内に特徴点が存在しないことを確認
+    // Verify that no feature points exist in the mask
     for (const auto& keypt : keypts) {
         EXPECT_GE(keypt.pt.y, img.rows / 4);
         EXPECT_LE(keypt.pt.y, 3 * img.rows / 4);
@@ -153,11 +153,11 @@ TEST(orb_extractor, extract_with_image_mask_1) {
 
 TEST(orb_extractor, extract_with_image_mask_2) {
     const auto params = feature::orb_params("ORB setting for test");
-    auto extractor = feature::orb_extractor(&params, 1000);
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB);
 
     // image
     const auto img = cv::imread(std::string(TEST_DATA_DIR) + "./equirectangular_image_002.jpg", cv::IMREAD_GRAYSCALE);
-    // mask (左右25%をマスク)
+    // mask (Mask 25% of left and right)
     auto mask = cv::Mat(img.rows, img.cols, CV_8UC1);
     mask = 1;
     mask.colRange(0, img.cols / 4) = 0;
@@ -172,7 +172,7 @@ TEST(orb_extractor, extract_with_image_mask_2) {
     EXPECT_EQ(keypts.size(), desc.rows);
     EXPECT_EQ(desc.type(), CV_8U);
 
-    // mask内に特徴点が存在しないことを確認
+    // Verify that no feature points exist in the mask
     for (const auto& keypt : keypts) {
         EXPECT_GE(keypt.pt.x, img.cols / 4);
         EXPECT_LE(keypt.pt.x, 3 * img.cols / 4);
@@ -190,11 +190,11 @@ TEST(orb_extractor, extract_with_image_mask_2) {
 
 TEST(orb_extractor, extract_with_image_mask_3) {
     const auto params = feature::orb_params("ORB setting for test");
-    auto extractor = feature::orb_extractor(&params, 1000);
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB);
 
     // image
     const auto img = cv::imread(std::string(TEST_DATA_DIR) + "./equirectangular_image_001.jpg", cv::IMREAD_GRAYSCALE);
-    // mask (画像中央に半径320pixのマスク)
+    // mask (Mask with 320 pixel radius in the center of the image)
     const unsigned int radius = 320;
     auto mask = cv::Mat(img.rows, img.cols, CV_8UC1);
     mask = 1;
@@ -209,7 +209,7 @@ TEST(orb_extractor, extract_with_image_mask_3) {
     EXPECT_EQ(keypts.size(), desc.rows);
     EXPECT_EQ(desc.type(), CV_8U);
 
-    // mask内に特徴点が存在しないことを確認
+    // Verify that no feature points exist in the mask
     for (const auto& keypt : keypts) {
         const auto dist_x = keypt.pt.x - img.cols / 2;
         const auto dist_y = keypt.pt.y - img.rows / 2;
@@ -230,8 +230,8 @@ TEST(orb_extractor, extract_with_image_mask_3) {
 
 TEST(orb_extractor, extract_with_rectangle_mask_1) {
     auto params = feature::orb_params("ORB setting for test");
-    // mask (上下20%をマスク)
-    auto extractor = feature::orb_extractor(&params, 1000, {{0.0, 1.0, 0.0, 0.2}, {0.0, 1.0, 0.8, 1.0}});
+    // mask (Mask 20% of top and bottom)
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB, {{0.0, 1.0, 0.0, 0.2}, {0.0, 1.0, 0.8, 1.0}});
 
     // image
     const auto img = cv::imread(std::string(TEST_DATA_DIR) + "./equirectangular_image_001.jpg", cv::IMREAD_GRAYSCALE);
@@ -245,7 +245,7 @@ TEST(orb_extractor, extract_with_rectangle_mask_1) {
     EXPECT_EQ(keypts.size(), desc.rows);
     EXPECT_EQ(desc.type(), CV_8U);
 
-    // mask内に特徴点が存在しないことを確認
+    // Verify that no feature points exist in the mask
     for (const auto& keypt : keypts) {
         EXPECT_GE(keypt.pt.y, img.rows / 5);
         EXPECT_LE(keypt.pt.y, 4 * img.rows / 5);
@@ -263,8 +263,8 @@ TEST(orb_extractor, extract_with_rectangle_mask_1) {
 
 TEST(orb_extractor, extract_with_rectangle_mask_2) {
     auto params = feature::orb_params("ORB setting for test");
-    // mask (上下20%をマスク)
-    auto extractor = feature::orb_extractor(&params, 1000, {{0.0, 0.2, 0.0, 1.0}, {0.8, 1.0, 0.0, 1.0}});
+    // mask (Mask 20% of left and right)
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB, {{0.0, 0.2, 0.0, 1.0}, {0.8, 1.0, 0.0, 1.0}});
 
     // image
     const auto img = cv::imread(std::string(TEST_DATA_DIR) + "./equirectangular_image_002.jpg", cv::IMREAD_GRAYSCALE);
@@ -278,7 +278,7 @@ TEST(orb_extractor, extract_with_rectangle_mask_2) {
     EXPECT_EQ(keypts.size(), desc.rows);
     EXPECT_EQ(desc.type(), CV_8U);
 
-    // mask内に特徴点が存在しないことを確認
+    // Verify that no feature points exist in the mask
     for (const auto& keypt : keypts) {
         EXPECT_GE(keypt.pt.x, img.cols / 5);
         EXPECT_LE(keypt.pt.x, 4 * img.cols / 5);
@@ -296,8 +296,8 @@ TEST(orb_extractor, extract_with_rectangle_mask_2) {
 
 TEST(orb_extractor, extract_with_rectangle_mask_3) {
     auto params = feature::orb_params("ORB setting for test");
-    // mask (上下左右20%をマスク)
-    auto extractor = feature::orb_extractor(&params, 1000, {{0.0, 0.2, 0.0, 1.0}, {0.8, 1.0, 0.0, 1.0}, {0.0, 1.0, 0.0, 0.2}, {0.0, 1.0, 0.8, 1.0}});
+    // mask (Mask 20% of top, bottom, left and right)
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB, {{0.0, 0.2, 0.0, 1.0}, {0.8, 1.0, 0.0, 1.0}, {0.0, 1.0, 0.0, 0.2}, {0.0, 1.0, 0.8, 1.0}});
 
     // image
     const auto img = cv::imread(std::string(TEST_DATA_DIR) + "./equirectangular_image_002.jpg", cv::IMREAD_GRAYSCALE);
@@ -311,7 +311,7 @@ TEST(orb_extractor, extract_with_rectangle_mask_3) {
     EXPECT_EQ(keypts.size(), desc.rows);
     EXPECT_EQ(desc.type(), CV_8U);
 
-    // mask内に特徴点が存在しないことを確認
+    // Verify that no feature points exist in the mask
     for (const auto& keypt : keypts) {
         EXPECT_GE(keypt.pt.x, img.cols / 5);
         EXPECT_LE(keypt.pt.x, 4 * img.cols / 5);
@@ -331,13 +331,13 @@ TEST(orb_extractor, extract_with_rectangle_mask_3) {
 
 TEST(orb_extractor, extract_toy_sample_3) {
     const auto params = feature::orb_params("ORB setting for test");
-    auto extractor = feature::orb_extractor(&params, 1000);
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB);
 
     // image
     auto img = cv::Mat(1200, 600, CV_8UC1);
     img = 255;
     cv::rectangle(img, cv::Point2i(300, 600), cv::Point2i(600, 1200), cv::Scalar(0), -1, cv::LINE_AA);
-    // mask (無効)
+    // mask (disabled)
     const auto mask = cv::Mat();
 
     std::vector<cv::KeyPoint> keypts;
@@ -349,7 +349,7 @@ TEST(orb_extractor, extract_toy_sample_3) {
     EXPECT_EQ(keypts.size(), desc.rows);
     EXPECT_EQ(desc.type(), CV_8U);
 
-    // スケールを考慮して誤差を測定
+    // evaluate error with scale
     for (const auto& keypt : keypts) {
         EXPECT_NEAR(keypt.pt.x, 300, 2.0 * params.scale_factors_.at(keypt.octave));
         EXPECT_NEAR(keypt.pt.y, 600, 2.0 * params.scale_factors_.at(keypt.octave));
@@ -358,14 +358,14 @@ TEST(orb_extractor, extract_toy_sample_3) {
 
 TEST(orb_extractor, extract_without_mask_3) {
     const auto params = feature::orb_params("ORB setting for test");
-    auto extractor = feature::orb_extractor(&params, 1000);
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB);
 
     // image
     const auto img_land = cv::imread(std::string(TEST_DATA_DIR) + "./equirectangular_image_001.jpg", cv::IMREAD_GRAYSCALE);
     // Rotate the landscape image to make it portrait one
     cv::Mat img;
     cv::rotate(img_land, img, cv::ROTATE_90_CLOCKWISE);
-    // mask (無効)
+    // mask (disabled)
     const auto mask = cv::Mat();
 
     std::vector<cv::KeyPoint> keypts;
@@ -380,14 +380,14 @@ TEST(orb_extractor, extract_without_mask_3) {
 
 TEST(orb_extractor, extract_without_mask_4) {
     const auto params = feature::orb_params("ORB setting for test");
-    auto extractor = feature::orb_extractor(&params, 1000);
+    auto extractor = feature::orb_extractor(&params, 1000, feature::descriptor_type::ORB);
 
     // image
     const auto img_land = cv::imread(std::string(TEST_DATA_DIR) + "./equirectangular_image_002.jpg", cv::IMREAD_GRAYSCALE);
     // Rotate the landscape image to make it portrait one
     cv::Mat img;
     cv::rotate(img_land, img, cv::ROTATE_90_CLOCKWISE);
-    // mask (無効)
+    // mask (disabled)
     const auto mask = cv::Mat();
 
     std::vector<cv::KeyPoint> keypts;

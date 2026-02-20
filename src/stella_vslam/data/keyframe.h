@@ -15,7 +15,6 @@
 #include <atomic>
 #include <memory>
 
-#include <g2o/types/sba/types_six_dof_expmap.h>
 #include <nlohmann/json_fwd.hpp>
 #include <sqlite3.h>
 
@@ -52,7 +51,8 @@ public:
     keyframe(const unsigned int id,
              const double timestamp, const Mat44_t& pose_cw, camera::base* camera,
              const feature::orb_params* orb_params, const frame_observation& frm_obs,
-             const bow_vector& bow_vec, const bow_feature_vector& bow_feat_vec);
+             const bow_vector& bow_vec, const bow_feature_vector& bow_feat_vec,
+             std::unordered_map<unsigned int, marker2d> markers_2d = {});
     virtual ~keyframe();
 
     // Factory method for create keyframe
@@ -61,7 +61,8 @@ public:
         const unsigned int id,
         const double timestamp, const Mat44_t& pose_cw, camera::base* camera,
         const feature::orb_params* orb_params, const frame_observation& frm_obs,
-        const bow_vector& bow_vec, const bow_feature_vector& bow_feat_vec);
+        const bow_vector& bow_vec, const bow_feature_vector& bow_feat_vec,
+        std::unordered_map<unsigned int, marker2d> markers_2d = {});
     static std::shared_ptr<keyframe> from_stmt(sqlite3_stmt* stmt,
                                                camera_database* cam_db,
                                                orb_params_database* orb_params_db,
@@ -95,7 +96,9 @@ public:
             {"undist_keypts", "BLOB"},
             {"x_rights", "BLOB"},
             {"depths", "BLOB"},
-            {"descs", "BLOB"}};
+            {"descs", "BLOB"},
+            {"n_markers", "INTEGER"},
+            {"markers", "BLOB"}};
     };
     bool bind_to_stmt(sqlite3* db, sqlite3_stmt* stmt) const;
 
@@ -106,11 +109,6 @@ public:
      * Set camera pose
      */
     void set_pose_cw(const Mat44_t& pose_cw);
-
-    /**
-     * Set camera pose
-     */
-    void set_pose_cw(const g2o::SE3Quat& pose_cw);
 
     /**
      * Get the camera pose
@@ -208,6 +206,11 @@ public:
     float compute_median_depth(const bool abs = false) const;
 
     /**
+     * Compute median of distances
+     */
+    float compute_median_distance() const;
+
+    /**
      * Whether or not the camera setting is capable of obtaining depth information
      */
     bool depth_is_available() const;
@@ -270,14 +273,14 @@ public:
     //-----------------------------------------
     // constant observations
 
-    const frame_observation frm_obs_;
-
-    //! observed markers 2D (ID to marker2d map)
-    std::unordered_map<unsigned int, marker2d> markers_2d_;
+    frame_observation frm_obs_;
 
     //! BoW features (DBoW2 or FBoW)
     bow_vector bow_vec_;
     bow_feature_vector bow_feat_vec_;
+
+    //! observed markers 2D (ID to marker2d map)
+    std::unordered_map<unsigned int, marker2d> markers_2d_;
 
     //-----------------------------------------
     // covisibility graph
@@ -320,6 +323,12 @@ private:
 
     //! flag which indicates this keyframe will be erased
     std::atomic<bool> will_be_erased_{false};
+
+    //-----------------------------------------
+    // misc
+
+    //!
+    static constexpr int MARKERS2D_BLOB_NUM_DOUBLES = 33;
 };
 
 } // namespace data
